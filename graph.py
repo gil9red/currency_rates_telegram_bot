@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'SPridannikov'
+__author__ = 'ipetrash'
 
 
 import os
@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import db
 
 
-def create_graph(items: List[db.ExchangeRate],path_graph):
+def create_graph(items: List[db.ExchangeRate], path_graph):
     plt.clf()
 
     days = len(items)
@@ -27,6 +27,6 @@ def create_graph(items: List[db.ExchangeRate],path_graph):
 
 if __name__ == '__main__':
     items = db.ExchangeRate.get_last_by(days=30)
-    create_graph(items,'img/graph_s2.png')
+    create_graph(items, 'img/graph_s2.png')
     items = db.ExchangeRate.get_last_by(days=7)
     create_graph(items, 'img/graph_s1.png')

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'SPridannikov'
+__author__ = 'ipetrash'
 
 
 import datetime as DT
 import time
-from typing import Type,List
+from typing import Type, List
 
 # pip install peewee
 from peewee import (
@@ -16,7 +16,16 @@ from peewee import (
 from playhouse.sqliteq import SqliteQueueDatabase
 
 from config import DB_FILE_NAME
-from common import shorten
+from bot.common import get_date_str
+
+
+def shorten(text: str, length=30) -> str:
+    if not text:
+        return text
+
+    if len(text) > length:
+        text = text[:length] + '...'
+    return text
 
 
 # This working with multithreading
@@ -91,8 +100,8 @@ class Subscription(BaseModel):
         return cls.select().where(cls.was_sending == False, cls.is_active == True)
 
     @classmethod
-    def get_is_active(cls,chat_id) -> 'Subscription':
-        return cls.get_or_none(cls.chat_id == chat_id,cls.is_active)
+    def get_is_active(cls, chat_id) -> 'Subscription':
+        return cls.get_or_none(cls.chat_id == chat_id, cls.is_active)
 
     def set_active(self, active: bool):
         self.is_active = active
@@ -110,8 +119,8 @@ db.create_tables([ExchangeRate, Subscription])
 # Т.к. в SqliteQueueDatabase запросы на чтение выполняются сразу, а на запись попадают в очередь
 time.sleep(0.050)
 
+
 if __name__ == '__main__':
-    pass
     print(ExchangeRate.select().count())
     print(ExchangeRate.get(ExchangeRate.id == 1).value)
 
@@ -123,8 +132,7 @@ if __name__ == '__main__':
 
     print(Subscription.select().where(Subscription.is_active == True).count())
 
-    print(ExchangeRate.select().first().date.strftime('%d.%m.%Y'))
-    print(ExchangeRate.get_last().date.strftime('%d.%m.%Y'))
+    print(get_date_str(ExchangeRate.select().first().date))
+    print(get_date_str(ExchangeRate.get_last().date))
 
     print(Subscription.get_is_active(973083137))
-

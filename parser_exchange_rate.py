@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'SPridannikov'
+__author__ = 'ipetrash'
 
 
 import datetime as DT
@@ -12,6 +12,7 @@ import requests
 from bs4 import BeautifulSoup
 
 import db
+from bot.common import get_date_str
 
 
 def get_last_usd() -> Tuple[DT.date, Decimal]:
@@ -36,8 +37,9 @@ def parse():
     exchange_rate = db.ExchangeRate.get_or_none(db.ExchangeRate.date == date)
     if not exchange_rate:
         db.ExchangeRate.create(date=date, value=value)
-        print(f'Добавлено: {date:%d.%m.%Y} = {value}')
+        print(f'Добавлено: {get_date_str(date)} = {value}')
 
+        # TODO: db.Subscription.update
         for s in db.Subscription.select():
             s.was_sending = False
             s.save()

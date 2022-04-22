@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'SPridannikov'
+__author__ = 'ipetrash'
 
 
 import time
@@ -9,6 +9,7 @@ import time
 from telegram import Bot, ParseMode
 
 import db
+from bot.common import get_date_str
 
 
 def check(bot: Bot):
@@ -18,7 +19,7 @@ def check(bot: Bot):
 
             bot.send_message(
                 s.chat_id,
-                f'Актуальный курс USD за <b><u>{rate.date:%d.%m.%Y}</u></b>: {rate.value}₽',
+                f'Актуальный курс USD за <b><u>{get_date_str(rate.date)}</u></b>: {rate.value}₽',
                 parse_mode=ParseMode.HTML
              )
 

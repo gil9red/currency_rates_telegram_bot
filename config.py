@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'SPridannikov'
+__author__ = 'ipetrash'
 
 
 import os
@@ -12,6 +12,17 @@ from pathlib import Path
 
 # Текущая папка, где находится скрипт
 DIR = Path(__file__).resolve().parent
+
+DIR_LOGS: Path = DIR / 'logs'
+DIR_LOGS.mkdir(parents=True, exist_ok=True)
+
+# Создание папки для базы данных
+DB_DIR_NAME = DIR / 'database'
+DB_DIR_NAME.mkdir(parents=True, exist_ok=True)
+
+# Путь к файлу базы данных
+DB_FILE_NAME = str(DB_DIR_NAME / 'database.sqlite')
+
 TOKEN_FILE_NAME = DIR / 'TOKEN.txt'
 
 try:
@@ -24,16 +35,16 @@ except:
     TOKEN_FILE_NAME.touch()
     sys.exit()
 
-ADMIN_USERNAME='Rusich_As'
+USER_NAME_ADMINS = [
+    '@ilya_petrash',
+]
 
+# TODO: Удалить и генерировать в памяти, без сохранения на диск
 PATH_GRAPH_WEEK = 'img/graph_week.png'
 PATH_GRAPH_MONTH = 'img/graph_month.png'
 
-ERROR_TEXT = '⚠ Возникла какая-то проблема. Попробуйте повторить запрос или попробовать чуть позже...'
+ERROR_TEXT = 'Возникла какая-то проблема. Попробуйте повторить запрос или попробовать чуть позже...'
 
-# Создание папки для базы данных
-DB_DIR_NAME = DIR / 'database'
-DB_DIR_NAME.mkdir(parents=True, exist_ok=True)
+MAX_MESSAGE_LENGTH = 4096
 
-# Путь к файлу базы данных
-DB_FILE_NAME = str(DB_DIR_NAME / 'database.sqlite')
+DATE_FORMAT: str = '%d/%m/%Y'
