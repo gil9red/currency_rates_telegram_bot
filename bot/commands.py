@@ -170,7 +170,7 @@ def setup(dp: Dispatcher):
 
     dp.add_handler(CommandHandler('admin_stats', on_get_admin_stats, FILTER_BY_ADMIN))
     # TODO: В переменную
-    dp.add_handler(MessageHandler(Filters.text('Статистика админа') and FILTER_BY_ADMIN, on_get_admin_stats))
+    dp.add_handler(MessageHandler(Filters.text('Статистика админа') & FILTER_BY_ADMIN, on_get_admin_stats))
 
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST), on_command_last))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_WEEK), on_command_last_by_week))
