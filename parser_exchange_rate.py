@@ -39,7 +39,8 @@ def parse():
         db.ExchangeRate.create(date=date, value=value)
         print(f'Добавлено: {get_date_str(date)} = {value}')
 
-        # TODO: db.Subscription.update
-        for s in db.Subscription.select():
-            s.was_sending = False
-            s.save()
+        db.Subscription.update(was_sending=False).execute()
+
+
+if __name__ == '__main__':
+    parse()
