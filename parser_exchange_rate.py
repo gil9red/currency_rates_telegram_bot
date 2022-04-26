@@ -15,18 +15,29 @@ import db
 from bot.common import get_date_str
 
 
-def get_last_usd() -> Tuple[DT.date, Decimal]:
+def get_last_currencies() -> tuple[DT.date, dict[str, Decimal]]:
     url = 'https://www.cbr.ru/scripts/XML_daily.asp'
 
     rs = requests.get(url)
-    soup = BeautifulSoup(rs.content, 'html.parser')
+    root = BeautifulSoup(rs.content, 'html.parser')
 
-    for s in soup.find_all('valute'):
-        if s.charcode.string == 'USD':
-            date = DT.datetime.strptime(
-                soup.valcurs['date'], '%d.%m.%Y'
-            )
-            return date.date(), Decimal(s.value.string.replace(',', '.'))
+    date = DT.datetime.strptime(root.valcurs['date'], '%d.%m.%Y')
+    currency_by_value = dict()
+
+    for s in root.find_all('valute'):
+        currency = s.charcode.string
+        value = Decimal(s.value.string.replace(',', '.'))
+        currency_by_value[currency] = value
+
+    return date, currency_by_value
+
+
+# TODO: удалить, использовать get_last_currencies
+def get_last_usd() -> Tuple[DT.date, Decimal]:
+    date, currency_by_value = get_last_currencies()
+    value = currency_by_value.get('USD')
+    if value:
+        return date, value
 
     raise Exception('Не удалось найти значение USD!')
 
@@ -43,4 +54,6 @@ def parse():
 
 
 if __name__ == '__main__':
+    print(get_last_currencies())
+
     parse()
