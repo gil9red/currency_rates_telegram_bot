@@ -54,6 +54,7 @@ def parse():
 
 
 if __name__ == '__main__':
-    print(get_last_currencies())
+    date, currency_by_value = get_last_currencies()
+    print(f'Дата {get_date_str(date)}. Валют ({len(currency_by_value)}): {currency_by_value}')
 
     parse()
