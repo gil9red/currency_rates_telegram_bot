@@ -9,7 +9,7 @@ from telegram import Update, ReplyKeyboardMarkup, ParseMode
 from telegram.ext import Dispatcher, MessageHandler, CommandHandler, Filters, CallbackContext
 
 import db
-from root_config import USER_NAME_ADMINS, DEFAULT_CURRENCY_CODE_LIST, DEFAULT_CURRENCY_CODE
+from root_config import USER_NAME_ADMINS, DEFAULT_CURRENCY_CODES, DEFAULT_CURRENCY_CODE
 from bot.common import get_date_str, log, log_func, process_error, reply_message, SeverityEnum, SubscriptionResultEnum
 from utils.graph import get_plot_for_currency
 
@@ -118,7 +118,7 @@ def on_command_unsubscribe(update: Update, context: CallbackContext):
 def on_command_last(update: Update, context: CallbackContext):
     # TODO: Default currency code? Или мб брать первую валюту из настроек?
     reply_message(
-        text=db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CODE_LIST),
+        text=db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CODES),
         update=update, context=context,
         parse_mode=ParseMode.HTML,
         reply_markup=get_reply_keyboard(update)

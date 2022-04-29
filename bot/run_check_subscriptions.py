@@ -11,7 +11,7 @@ from telegram import Bot, ParseMode
 
 import db
 from bot.common import caller_name
-from root_config import DEFAULT_CURRENCY_CODE_LIST  # TODO: Использовать настройки юзера
+from root_config import DEFAULT_CURRENCY_CODES  # TODO: Использовать настройки юзера
 
 
 def sending_notifications(bot: Bot, log: logging.Logger):
@@ -23,7 +23,7 @@ def sending_notifications(bot: Bot, log: logging.Logger):
             if not subscriptions:
                 continue
 
-            text = f'<b>Рассылка</b>\n{db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CODE_LIST)}'
+            text = f'<b>Рассылка</b>\n{db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CODES)}'
             for subscription in subscriptions:
                 bot.send_message(
                     chat_id=subscription.user_id,  # Для приватных чатов chat_id равен user_id

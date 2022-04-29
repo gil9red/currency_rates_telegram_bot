@@ -43,11 +43,11 @@ ERROR_TEXT = 'Возникла какая-то проблема. Попробу�
 
 MAX_MESSAGE_LENGTH = 4096
 
-DEFAULT_CURRENCY_CODE_LIST = [
+DEFAULT_CURRENCY_CODES = [
     'USD',
     'EUR',
     'CNY',
 ]
-DEFAULT_CURRENCY_CODE = DEFAULT_CURRENCY_CODE_LIST[0]
+DEFAULT_CURRENCY_CODE = DEFAULT_CURRENCY_CODES[0]
 
 DATE_FORMAT: str = '%d/%m/%Y'
