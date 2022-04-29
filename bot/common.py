@@ -21,7 +21,7 @@ from telegram.ext import CallbackContext
 from telegram.utils.types import FileInput
 from telegram.files.photosize import PhotoSize
 
-from config import DATE_FORMAT, DIR_LOGS, ERROR_TEXT, MAX_MESSAGE_LENGTH
+from root_config import DATE_FORMAT, DIR_LOGS, ERROR_TEXT, MAX_MESSAGE_LENGTH
 
 
 def get_date_str(date: DT.date) -> str:

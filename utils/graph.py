@@ -15,7 +15,7 @@ import matplotlib.dates as mdates
 from matplotlib.figure import Figure
 
 import db
-from config import DATE_FORMAT
+from root_config import DATE_FORMAT
 from bot.common import get_date_str
 
 

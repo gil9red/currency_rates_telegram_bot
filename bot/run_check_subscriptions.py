@@ -11,7 +11,7 @@ from telegram import Bot, ParseMode
 
 import db
 from bot.common import caller_name
-from config import DEFAULT_CURRENCY_CODE_LIST  # TODO: Использовать настройки юзера
+from root_config import DEFAULT_CURRENCY_CODE_LIST  # TODO: Использовать настройки юзера
 
 
 def sending_notifications(bot: Bot, log: logging.Logger):

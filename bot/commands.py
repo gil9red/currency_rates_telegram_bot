@@ -9,7 +9,7 @@ from telegram import Update, ReplyKeyboardMarkup, ParseMode
 from telegram.ext import Dispatcher, MessageHandler, CommandHandler, Filters, CallbackContext
 
 import db
-from config import USER_NAME_ADMINS, DEFAULT_CURRENCY_CODE_LIST, DEFAULT_CURRENCY_CODE
+from root_config import USER_NAME_ADMINS, DEFAULT_CURRENCY_CODE_LIST, DEFAULT_CURRENCY_CODE
 from bot.common import get_date_str, log, log_func, process_error, reply_message, SeverityEnum, SubscriptionResultEnum
 from utils.graph import get_plot_for_currency
 

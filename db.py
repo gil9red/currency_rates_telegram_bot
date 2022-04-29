@@ -17,8 +17,9 @@ from peewee import (
 )
 from playhouse.sqliteq import SqliteQueueDatabase
 
-from config import DB_FILE_NAME
+from root_config import DB_FILE_NAME
 from bot.common import get_date_str, SubscriptionResultEnum
+from parser.config import START_DATE
 
 
 ITEMS_PER_PAGE: int = 10
@@ -161,7 +162,10 @@ class ExchangeRate(BaseModel):
     @classmethod
     def get_last_dates(cls, number: int = -1) -> list[DT.date]:
         query = cls.select(cls.date).distinct().limit(number).order_by(cls.date.desc())
-        return [rate.date for rate in query]
+        items = [rate.date for rate in query]
+        if not items:
+            items.append(START_DATE)
+        return items
 
     @classmethod
     def get_last_date(cls) -> DT.date:

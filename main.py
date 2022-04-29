@@ -11,12 +11,12 @@ from threading import Thread
 # pip install python-telegram-bot
 from telegram.ext import Updater, Defaults
 
-from config import TOKEN
+from root_config import TOKEN
 
-import parser_exchange_rate
 from bot import commands
 from bot.common import log
 from bot.run_check_subscriptions import sending_notifications
+from parser.main import run as run_parser
 
 
 def main():
@@ -46,24 +46,8 @@ def main():
     log.debug('Finish')
 
 
-# TODO:
-# def loop_parse_and_check_graph():
-#     while True:
-#         parse()
-#
-#         items = db.ExchangeRate.get_last_by(days=7)
-#         create_graph(items, PATH_GRAPH_WEEK)
-#
-#         items = db.ExchangeRate.get_last_by(days=30)
-#         create_graph(items, PATH_GRAPH_MONTH)
-#
-#         time.sleep(8 * 3600)
-
-
 if __name__ == '__main__':
-    # TODO:
-    # Thread(target=loop_parse_and_check_graph).start()
-    Thread(target=parser_exchange_rate.run).start()
+    Thread(target=run_parser).start()
 
     while True:
         try:
