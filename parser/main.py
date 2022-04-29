@@ -78,7 +78,7 @@ def parse(date_req: DT.date):
 
     diff_count = db.ExchangeRate.count() - old_count
     if diff_count > 0:
-        print(f'Было добавлено {diff_count} записей')
+        print(f'Добавлено {diff_count} записей')
         print()
         db.Subscription.update(was_sending=False).execute()
 
