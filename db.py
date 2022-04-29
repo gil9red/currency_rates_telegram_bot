@@ -309,10 +309,13 @@ if __name__ == '__main__':
     print(get_date_str(ExchangeRate.get_last().date))
     print()
 
+    print('\n' + '-' * 10 + '\n')
+
     rate = ExchangeRate.get_last_by('USD')
     print(rate)
     print(rate.get_description())
-    print()
+
+    print('\n' + '-' * 10 + '\n')
 
     for rate in ExchangeRate.get_last_rates('USD', number=3):
         print(rate)
