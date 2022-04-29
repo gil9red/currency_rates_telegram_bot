@@ -238,7 +238,8 @@ class ExchangeRate(BaseModel):
         ]
         for currency_code in currency_code_list:
             rate = cls.get_by(date, currency_code)
-            lines.append(f'    {rate.get_description(show_diff)}')
+            if rate:
+                lines.append(f'    {rate.get_description(show_diff)}')
 
         return '\n'.join(lines)
 
