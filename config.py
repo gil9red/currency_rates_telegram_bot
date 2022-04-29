@@ -39,12 +39,15 @@ USER_NAME_ADMINS = [
     '@ilya_petrash',
 ]
 
-# TODO: Удалить и генерировать в памяти, без сохранения на диск
-PATH_GRAPH_WEEK = 'img/graph_week.png'
-PATH_GRAPH_MONTH = 'img/graph_month.png'
-
 ERROR_TEXT = 'Возникла какая-то проблема. Попробуйте повторить запрос или попробовать чуть позже...'
 
 MAX_MESSAGE_LENGTH = 4096
+
+DEFAULT_CURRENCY_CODE_LIST = [
+    'USD',
+    'EUR',
+    'CNY',
+]
+DEFAULT_CURRENCY_CODE = DEFAULT_CURRENCY_CODE_LIST[0]
 
 DATE_FORMAT: str = '%d/%m/%Y'

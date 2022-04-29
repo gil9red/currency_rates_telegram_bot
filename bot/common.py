@@ -7,6 +7,7 @@ __author__ = 'ipetrash'
 import datetime as DT
 import enum
 import functools
+import inspect
 import logging
 import sys
 
@@ -25,6 +26,12 @@ from config import DATE_FORMAT, DIR_LOGS, ERROR_TEXT, MAX_MESSAGE_LENGTH
 
 def get_date_str(date: DT.date) -> str:
     return date.strftime(DATE_FORMAT)
+
+
+# SOURCE: https://github.com/gil9red/telegram__random_bashim_bot/blob/e9d705a52223597c6965ef82f0b0d55fa11722c2/bot/parsers.py#L37
+def caller_name() -> str:
+    """Return the calling function's name."""
+    return inspect.currentframe().f_back.f_code.co_name
 
 
 def get_logger(
@@ -105,6 +112,13 @@ class SeverityEnum(enum.Enum):
 
     def get_text(self, text: str) -> str:
         return self.value.format(text=text)
+
+
+# SOURCE: https://github.com/gil9red/get_metal_rates/blob/6483005419c6abde470763af0b750159c1cc1290/root_common.py#L53
+class SubscriptionResultEnum(enum.Enum):
+    SUBSCRIBE_OK = enum.auto()
+    UNSUBSCRIBE_OK = enum.auto()
+    ALREADY = enum.auto()
 
 
 def reply_message(

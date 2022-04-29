@@ -5,8 +5,8 @@ __author__ = 'ipetrash'
 
 
 import datetime as DT
+import time
 from decimal import Decimal
-from typing import Tuple
 
 import requests
 from bs4 import BeautifulSoup
@@ -32,29 +32,35 @@ def get_last_currencies() -> tuple[DT.date, dict[str, Decimal]]:
     return date, currency_by_value
 
 
-# TODO: удалить, использовать get_last_currencies
-def get_last_usd() -> Tuple[DT.date, Decimal]:
-    date, currency_by_value = get_last_currencies()
-    value = currency_by_value.get('USD')
-    if value:
-        return date, value
-
-    raise Exception('Не удалось найти значение USD!')
-
-
+# TODO: Добавить логгер
 def parse():
-    date, value = get_last_usd()
+    date, currency_by_value = get_last_currencies()
 
-    exchange_rate = db.ExchangeRate.get_or_none(db.ExchangeRate.date == date)
-    if not exchange_rate:
-        db.ExchangeRate.create(date=date, value=value)
-        print(f'Добавлено: {get_date_str(date)} = {value}')
+    old_count = db.ExchangeRate.count()
+    for currency_code, value in currency_by_value.items():
+        rate = db.ExchangeRate.get_by(date=date, currency_code=currency_code)
+        if not rate:
+            db.ExchangeRate.add(
+                date=date,
+                currency_code=currency_code,
+                value=value,
+            )
+            print(f'За {get_date_str(date)} добавлено {currency_code} = {value}')
 
+    diff_count = db.ExchangeRate.count() - old_count
+    if diff_count > 0:
+        print(f'Было добавлено {diff_count} записей')
         db.Subscription.update(was_sending=False).execute()
+
+
+def run():
+    while True:
+        parse()
+        time.sleep(8 * 60 * 60)  # 8 hours
 
 
 if __name__ == '__main__':
     date, currency_by_value = get_last_currencies()
     print(f'Дата {get_date_str(date)}. Валют ({len(currency_by_value)}): {currency_by_value}')
 
-    parse()
+    run()
