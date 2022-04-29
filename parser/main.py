@@ -105,7 +105,7 @@ def run():
                 break
 
             if i > 0:
-                time.sleep(60)
+                time.sleep(5)
 
             i += 1
 
