@@ -11,11 +11,13 @@ from telegram import Bot, ParseMode
 
 import db
 from bot.common import caller_name
-from root_config import DEFAULT_CURRENCY_CODES  # TODO: Использовать настройки юзера
+from root_config import TOKEN, DEFAULT_CURRENCY_CODES  # TODO: Использовать настройки юзера
 
 
-def sending_notifications(bot: Bot, log: logging.Logger):
+def sending_notifications(log: logging.Logger):
     prefix = f'[{caller_name()}]'
+
+    bot = Bot(TOKEN)
 
     while True:
         try:

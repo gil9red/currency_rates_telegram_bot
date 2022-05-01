@@ -34,9 +34,6 @@ def main():
     bot = updater.bot
     log.debug(f'Bot name {bot.first_name!r} ({bot.name})')
 
-    # TODO: Вынести за функцию
-    Thread(target=sending_notifications, args=[updater.bot, log]).start()
-
     dp = updater.dispatcher
     commands.setup(dp)
 
@@ -48,6 +45,7 @@ def main():
 
 if __name__ == '__main__':
     Thread(target=run_parser).start()
+    Thread(target=sending_notifications, args=[log]).start()
 
     while True:
         try:
