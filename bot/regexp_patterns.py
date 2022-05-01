@@ -16,6 +16,9 @@ REPLY_ADMIN_STATS = 'Статистика админа'
 COMMAND_LAST = 'Последнее значение'
 PATTERN_INLINE_GET_BY_DATE = re.compile(r'^get_by_date=(.+)$')
 
+PATTERN_REPLY_SELECT_DATE = re.compile(r'^Выбрать дату', flags=re.IGNORECASE)
+PATTERN_INLINE_SELECT_DATE = re.compile(r'.+;\d+;\d+;\d+')  # NOTE: Формат telegramcalendar.py
+
 COMMAND_LAST_BY_WEEK = 'За неделю'
 COMMAND_LAST_BY_MONTH = 'За месяц'
 COMMAND_GET_ALL = 'За всё время'

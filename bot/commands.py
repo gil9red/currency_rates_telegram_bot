@@ -20,8 +20,10 @@ from bot.regexp_patterns import (
     PATTERN_INLINE_GET_BY_DATE, COMMAND_SUBSCRIBE, COMMAND_UNSUBSCRIBE,
     COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL,
     COMMAND_ADMIN_STATS, REPLY_ADMIN_STATS,
+    PATTERN_REPLY_SELECT_DATE, PATTERN_INLINE_SELECT_DATE,
     fill_string_pattern,
 )
+from bot.third_party import telegramcalendar
 from utils.graph import get_plot_for_currency
 
 
@@ -32,7 +34,7 @@ def get_reply_keyboard(update: Update) -> ReplyKeyboardMarkup:
     is_active = db.Subscription.has_is_active(update.effective_user.id)
 
     commands = [
-        [COMMAND_LAST],
+        [COMMAND_LAST, fill_string_pattern(PATTERN_REPLY_SELECT_DATE)],
         [COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL],
         [COMMAND_UNSUBSCRIBE if is_active else COMMAND_SUBSCRIBE]
     ]
@@ -58,7 +60,7 @@ def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboard
 @log_func(log)
 def on_start(update: Update, context: CallbackContext):
     reply_message(
-        f'Приветсвую {update.effective_user.first_name} 🙂\n'
+        f'Приветствую {update.effective_user.first_name} 🙂\n'
         'Данный бот способен отслеживать валюты и отправлять вам уведомление при изменении 💲.\n'
         'С помощью меню вы можете подписаться/отписаться от рассылки, узнать '
         'актуальный курс за день, неделю или месяц.',
@@ -112,6 +114,48 @@ def on_command_last(update: Update, context: CallbackContext):
         parse_mode=ParseMode.HTML,
         reply_markup=get_inline_keyboard_for_date_pagination(for_date)
     )
+
+
+@log_func(log)
+def on_select_date(update: Update, context: CallbackContext):
+    query = update.callback_query
+    if not query:
+        date = db.ExchangeRate.get_last_date()
+        reply_message(
+            "Пожалуйста, выберите дату:",
+            update=update, context=context,
+            reply_markup=telegramcalendar.create_calendar(
+                year=date.year,
+                month=date.month
+            )
+        )
+        return
+
+    query.answer()
+
+    bot = context.bot
+
+    selected, for_date = telegramcalendar.process_calendar_selection(bot, update)
+    if selected:
+        msg_not_found_for_date = ''
+        if not db.ExchangeRate.has_date(for_date):
+            msg_not_found_for_date = SeverityEnum.INFO.get_text(
+                f'За {get_date_str(for_date)} нет данных, будет выбрана ближайшая дата'
+            )
+            prev_date, next_date = db.ExchangeRate.get_prev_next_dates(for_date)
+            for_date = next_date if next_date else prev_date
+
+        text = db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CODES, for_date)
+        if msg_not_found_for_date:
+            text = msg_not_found_for_date + '\n\n' + text
+
+        reply_text_or_edit_with_keyboard(
+            message=update.effective_message,
+            query=query,
+            text=text,
+            parse_mode=ParseMode.HTML,
+            reply_markup=get_inline_keyboard_for_date_pagination(for_date),
+        )
 
 
 @log_func(log)
@@ -233,6 +277,9 @@ def setup(dp: Dispatcher):
 
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST), on_command_last))
     dp.add_handler(CallbackQueryHandler(on_command_last, pattern=PATTERN_INLINE_GET_BY_DATE))
+
+    dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_SELECT_DATE), on_select_date))
+    dp.add_handler(CallbackQueryHandler(on_select_date, pattern=PATTERN_INLINE_SELECT_DATE))
 
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_WEEK), on_command_last_by_week))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_MONTH), on_command_last_by_month))

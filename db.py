@@ -143,6 +143,10 @@ class ExchangeRate(BaseModel):
         return cls.get_or_none(date=date, currency_code=currency_code)
 
     @classmethod
+    def has_date(cls, date: DT.date) -> bool:
+        return bool(cls.get_or_none(date=date))
+
+    @classmethod
     def add(
             cls,
             date: DT.date,
