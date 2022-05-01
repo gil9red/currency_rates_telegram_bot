@@ -185,19 +185,27 @@ class ExchangeRate(BaseModel):
         return list(query)
 
     @classmethod
-    def get_prev_next_dates(cls, date: DT.date, currency_code: str) -> tuple[DT.date, DT.date]:
+    def get_prev_next_dates(cls, date: DT.date, currency_code: str = None) -> tuple[DT.date, DT.date]:
+        filters = [cls.date < date]
+        if currency_code:
+            filters.append(cls.currency_code == currency_code)
         prev_val = (
             cls.select(cls.date)
-                .where(cls.date < date, cls.currency_code == currency_code)
+                .distinct()
+                .where(*filters)
                 .limit(1)
                 .order_by(cls.date.desc())
                 .first()
         )
         prev_date = prev_val.date if prev_val else None
 
+        filters = [cls.date > date]
+        if currency_code:
+            filters.append(cls.currency_code == currency_code)
         next_val = (
             cls.select(cls.date)
-                .where(cls.date > date, cls.currency_code == currency_code)
+                .distinct()
+                .where(*filters)
                 .limit(1)
                 .order_by(cls.date.asc())
                 .first()
@@ -230,8 +238,9 @@ class ExchangeRate(BaseModel):
         return f'{self.currency_code}: {self.value:.4f}{text_diff_value}'
 
     @classmethod
-    def get_full_description(cls, currency_code_list: list[str], show_diff: bool = True) -> str:
-        date = cls.get_last_date()
+    def get_full_description(cls, currency_code_list: list[str], date: DT.date = None, show_diff: bool = True) -> str:
+        if not date:
+            date = cls.get_last_date()
 
         lines = [
             f'Актуальный курс за <b><u>{get_date_str(date)}</u></b>:'
@@ -309,6 +318,9 @@ time.sleep(0.050)
 if __name__ == '__main__':
     BaseModel.print_count_of_tables()
 
+    print()
+
+    print(ExchangeRate.get_prev_next_dates(DT.date.today()))
     print()
 
     print(get_date_str(ExchangeRate.get_last().date))
