@@ -6,7 +6,6 @@ __author__ = 'ipetrash'
 
 import os
 import time
-from threading import Thread
 
 # pip install python-telegram-bot
 from telegram.ext import Updater, Defaults
@@ -15,8 +14,8 @@ from root_config import TOKEN
 
 from bot import commands
 from bot.common import log
-from bot.run_check_subscriptions import sending_notifications
-from parser.main import run as run_parser
+
+import backgrounds_tasks
 
 
 def main():
@@ -44,8 +43,7 @@ def main():
 
 
 if __name__ == '__main__':
-    Thread(target=run_parser).start()
-    Thread(target=sending_notifications, args=[log]).start()
+    backgrounds_tasks.run()
 
     while True:
         try:

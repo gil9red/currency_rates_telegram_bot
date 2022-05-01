@@ -4,20 +4,25 @@
 __author__ = 'ipetrash'
 
 
-import logging
 import time
 
 from telegram import Bot, ParseMode
 
 import db
-from bot.common import caller_name
-from root_config import TOKEN, DEFAULT_CURRENCY_CODES  # TODO: Использовать настройки юзера
+from bot.common import caller_name, get_logger
+from root_config import DIR_LOGS, TOKEN, DEFAULT_CURRENCY_CODES  # TODO: Использовать настройки юзера
 
 
-def sending_notifications(log: logging.Logger):
+log = get_logger(__file__, DIR_LOGS / 'notifications.txt')
+
+
+def sending_notifications():
     prefix = f'[{caller_name()}]'
 
     bot = Bot(TOKEN)
+
+    log.info(f'{prefix} Запуск')
+    log.debug(f'{prefix} Имя бота {bot.first_name!r} ({bot.name})')
 
     while True:
         try:
@@ -44,3 +49,5 @@ def sending_notifications(log: logging.Logger):
 
         finally:
             time.sleep(1)
+
+    log.info(f'{prefix} Завершение')

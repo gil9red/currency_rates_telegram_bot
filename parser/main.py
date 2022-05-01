@@ -13,7 +13,11 @@ import requests
 from bs4 import BeautifulSoup
 
 import db
-from bot.common import get_date_str
+from bot.common import caller_name, get_date_str, get_logger
+from root_config import DIR_LOGS
+
+
+log = get_logger(__file__, DIR_LOGS / 'parser.txt')
 
 
 def get_next_date(date: DT.date) -> DT.date:
@@ -57,8 +61,7 @@ def get_currencies(date: DT.date) -> tuple[DT.date, dict[str, Decimal]]:
     return date, currency_by_value
 
 
-# TODO: Добавить логгер
-def parse(date_req: DT.date):
+def parse(date_req: DT.date, prefix: str = '[parse]'):
     date, currency_by_value = get_currencies(date_req)
 
     # Не за все даты на сайте есть информация
@@ -74,31 +77,30 @@ def parse(date_req: DT.date):
                 currency_code=currency_code,
                 value=value,
             )
-            print(f'За {get_date_str(date)} добавлено {currency_code} = {value}')
+            log.info(f'{prefix} За {get_date_str(date)} добавлено {currency_code} = {value}')
 
     diff_count = db.ExchangeRate.count() - old_count
     if diff_count > 0:
-        print(f'Добавлено {diff_count} записей')
-        print()
+        log.info(f'{prefix} Добавлено {diff_count} записей\n')
+
         db.Subscription.update(was_sending=False).execute()
 
 
-# TODO: Добавить логгер
-def run():
+def run_parser():
+    prefix = f'[{caller_name()}]'
+
     while True:
         start_date = db.ExchangeRate.get_last_date()
+        log.info(f'{prefix} Запуск проверки за {start_date}')
 
         i = 0
         for date_req in iter_dates(start_date):
             while True:
                 try:
-                    parse(date_req)
+                    parse(date_req, prefix=prefix)
 
-                # TODO: logger
-                except Exception as e:
-                    print(e)
-                # except Exception:
-                #     log.exception('Ошибка:')
+                except Exception:
+                    log.exception(f'{prefix} Ошибка:')
                     time.sleep(3600 * 4)  # Wait 4 hours
                     continue
 
@@ -109,6 +111,8 @@ def run():
 
             i += 1
 
+        log.info(f'{prefix} Завершение')
+
         time.sleep(8 * 60 * 60)  # 8 hours
 
 
@@ -117,4 +121,4 @@ if __name__ == '__main__':
     print(f'Дата {get_date_str(date)}. Валют ({len(currency_by_value)}): {currency_by_value}')
     print()
 
-    run()
+    run_parser()

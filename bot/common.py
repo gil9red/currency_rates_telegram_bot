@@ -7,16 +7,17 @@ __author__ = 'ipetrash'
 import datetime as DT
 import enum
 import functools
+import json
 import inspect
 import logging
 import sys
 
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
-from telegram import Update, ReplyMarkup
-from telegram.error import NetworkError
+from telegram import Update, ReplyMarkup, InlineKeyboardMarkup, CallbackQuery, Message
+from telegram.error import NetworkError, BadRequest
 from telegram.ext import CallbackContext
 from telegram.utils.types import FileInput
 from telegram.files.photosize import PhotoSize
@@ -28,7 +29,6 @@ def get_date_str(date: DT.date) -> str:
     return date.strftime(DATE_FORMAT)
 
 
-# SOURCE: https://github.com/gil9red/telegram__random_bashim_bot/blob/e9d705a52223597c6965ef82f0b0d55fa11722c2/bot/parsers.py#L37
 def caller_name() -> str:
     """Return the calling function's name."""
     return inspect.currentframe().f_back.f_code.co_name
@@ -154,6 +154,58 @@ def reply_message(
                 quote=quote,
                 **kwargs
             )
+
+
+# SOURCE: https://github.com/gil9red/get_metal_rates/blob/1f43cf779cd34753654cbc2681a408352fa37709/app_tg_bot/bot/common.py#L234
+def is_equal_inline_keyboards(
+        keyboard_1: Union[InlineKeyboardMarkup, str],
+        keyboard_2: InlineKeyboardMarkup
+) -> bool:
+    if isinstance(keyboard_1, InlineKeyboardMarkup):
+        keyboard_1_inline_keyboard = keyboard_1.to_dict()['inline_keyboard']
+    elif isinstance(keyboard_1, str):
+        keyboard_1_inline_keyboard = json.loads(keyboard_1)['inline_keyboard']
+    else:
+        raise Exception(f'Unsupported format (keyboard_1={type(keyboard_1)})!')
+
+    keyboard_2_inline_keyboard = keyboard_2.to_dict()['inline_keyboard']
+    return keyboard_1_inline_keyboard == keyboard_2_inline_keyboard
+
+
+# SOURCE: https://github.com/gil9red/telegram__random_bashim_bot/blob/e9c98248f10c4a74f0e26dcf5a949bf2260f57d4/common.py#L177
+def reply_text_or_edit_with_keyboard(
+    message: Message,
+    query: Optional[CallbackQuery],
+    text: str,
+    reply_markup: Union[InlineKeyboardMarkup, str],
+    quote: bool = True,
+    **kwargs,
+):
+    # Для запросов CallbackQuery нужно менять текущее сообщение
+    if query:
+        # Fix error: "telegram.error.BadRequest: Message is not modified"
+        if text == query.message.text and is_equal_inline_keyboards(reply_markup, query.message.reply_markup):
+            return
+
+        try:
+            message.edit_text(
+                text,
+                reply_markup=reply_markup,
+                **kwargs,
+            )
+        except BadRequest as e:
+            if 'Message is not modified' in str(e):
+                return
+
+            raise e
+
+    else:
+        message.reply_text(
+            text,
+            reply_markup=reply_markup,
+            quote=quote,
+            **kwargs,
+        )
 
 
 def process_error(log: logging.Logger, update: Update, context: CallbackContext):

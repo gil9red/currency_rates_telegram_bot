@@ -12,7 +12,10 @@ from telegram.ext import Dispatcher, MessageHandler, CommandHandler, Filters, Ca
 
 import db
 from root_config import USER_NAME_ADMINS, DEFAULT_CURRENCY_CODES, DEFAULT_CURRENCY_CODE
-from bot.common import get_date_str, log, log_func, process_error, reply_message, SeverityEnum, SubscriptionResultEnum
+from bot.common import (
+    get_date_str, log, log_func, process_error, reply_message, reply_text_or_edit_with_keyboard,
+    SeverityEnum, SubscriptionResultEnum
+)
 from bot.regexp_patterns import (
     PATTERN_INLINE_GET_BY_DATE, COMMAND_SUBSCRIBE, COMMAND_UNSUBSCRIBE,
     COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL,
@@ -89,6 +92,8 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
 
 @log_func(log)
 def on_command_last(update: Update, context: CallbackContext):
+    message = update.effective_message
+
     query = update.callback_query
     if query:
         query.answer()
@@ -101,9 +106,9 @@ def on_command_last(update: Update, context: CallbackContext):
     # TODO: Default currency code? Или мб брать первую валюту из настроек?
     text = db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CODES, for_date)
 
-    reply_message(
+    reply_text_or_edit_with_keyboard(
+        message=message, query=query,
         text=text,
-        update=update, context=context,
         parse_mode=ParseMode.HTML,
         reply_markup=get_inline_keyboard_for_date_pagination(for_date)
     )
@@ -227,11 +232,11 @@ def setup(dp: Dispatcher):
     dp.add_handler(MessageHandler(Filters.text(REPLY_ADMIN_STATS) & FILTER_BY_ADMIN, on_get_admin_stats))
 
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST), on_command_last))
+    dp.add_handler(CallbackQueryHandler(on_command_last, pattern=PATTERN_INLINE_GET_BY_DATE))
+
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_WEEK), on_command_last_by_week))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_MONTH), on_command_last_by_month))
-
     dp.add_handler(MessageHandler(Filters.text(COMMAND_GET_ALL), on_command_get_all))
-    dp.add_handler(CallbackQueryHandler(on_command_get_all, pattern=PATTERN_INLINE_GET_BY_DATE))
 
     dp.add_handler(MessageHandler(Filters.text(COMMAND_SUBSCRIBE), on_command_subscribe))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_UNSUBSCRIBE), on_command_unsubscribe))
