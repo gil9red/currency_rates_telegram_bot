@@ -91,6 +91,11 @@ if __name__ == '__main__':
 
     currency_code = 'USD'
 
+    number = -1
+    path = images_dir / f'graph_{currency_code}_={number}.png'
+    photo = get_plot_for_currency(currency_code=currency_code, number=number)
+    path.write_bytes(photo.read())
+
     number = 30
     path = images_dir / f'graph_{currency_code}_={number}.png'
     photo = get_plot_for_currency(currency_code=currency_code, number=number)

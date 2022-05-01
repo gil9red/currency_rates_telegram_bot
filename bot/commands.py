@@ -21,6 +21,7 @@ COMMAND_UNSUBSCRIBE = 'Отписаться'
 COMMAND_LAST = 'Последнее значение'
 COMMAND_LAST_BY_WEEK = 'За неделю'
 COMMAND_LAST_BY_MONTH = 'За месяц'
+COMMAND_GET_ALL = 'За всё время'
 
 FILTER_BY_ADMIN = Filters.user(username=USER_NAME_ADMINS)
 
@@ -29,7 +30,8 @@ def get_reply_keyboard(update: Update):
     is_active = db.Subscription.has_is_active(update.effective_user.id)
 
     commands = [
-        [COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH],
+        [COMMAND_LAST],
+        [COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL],
         [COMMAND_UNSUBSCRIBE if is_active else COMMAND_SUBSCRIBE]
     ]
     return ReplyKeyboardMarkup(commands, resize_keyboard=True)
@@ -162,6 +164,24 @@ def on_command_last_by_month(update: Update, context: CallbackContext):
 
 
 @log_func(log)
+def on_command_get_all(update: Update, context: CallbackContext):
+    currency_code = DEFAULT_CURRENCY_CODE
+    number = -1
+
+    # TODO: Default currency code? Или мб брать первую валюту из настроек?
+    reply_message(
+        text='',
+        photo=get_plot_for_currency(
+            currency_code=currency_code,
+            number=number,
+        ),
+        update=update, context=context,
+        parse_mode=ParseMode.HTML,
+        reply_markup=get_reply_keyboard(update)
+    )
+
+
+@log_func(log)
 def on_request(update: Update, context: CallbackContext):
     reply_message(
         'Неизвестная команда 🤔',
@@ -184,6 +204,7 @@ def setup(dp: Dispatcher):
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST), on_command_last))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_WEEK), on_command_last_by_week))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_MONTH), on_command_last_by_month))
+    dp.add_handler(MessageHandler(Filters.text(COMMAND_GET_ALL), on_command_get_all))
 
     dp.add_handler(MessageHandler(Filters.text(COMMAND_SUBSCRIBE), on_command_subscribe))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_UNSUBSCRIBE), on_command_unsubscribe))
