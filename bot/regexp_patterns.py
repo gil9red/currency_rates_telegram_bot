@@ -10,6 +10,9 @@ import re
 from bot.third_party.regexp import fill_string_pattern
 
 
+COMMAND_ADMIN_STATS = 'admin_stats'
+REPLY_ADMIN_STATS = 'Статистика админа'
+
 COMMAND_LAST = 'Последнее значение'
 PATTERN_INLINE_GET_BY_DATE = re.compile(r'^get_by_date=(.+)$')
 

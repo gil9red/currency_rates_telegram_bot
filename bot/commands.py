@@ -16,6 +16,7 @@ from bot.common import get_date_str, log, log_func, process_error, reply_message
 from bot.regexp_patterns import (
     PATTERN_INLINE_GET_BY_DATE, COMMAND_SUBSCRIBE, COMMAND_UNSUBSCRIBE,
     COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL,
+    COMMAND_ADMIN_STATS, REPLY_ADMIN_STATS,
     fill_string_pattern,
 )
 from utils.graph import get_plot_for_currency
@@ -83,50 +84,6 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
         parse_mode=ParseMode.HTML,
         severity=SeverityEnum.INFO,
         reply_markup=get_reply_keyboard(update)
-    )
-
-
-@log_func(log)
-def on_command_subscribe(update: Update, context: CallbackContext):
-    message = update.effective_message
-    user_id = message.from_user.id
-
-    result = db.Subscription.subscribe(user_id)
-    match result:
-        case SubscriptionResultEnum.ALREADY:
-            text = 'Подписка уже оформлена 🤔!'
-        case SubscriptionResultEnum.SUBSCRIBE_OK:
-            text = 'Подписка успешно оформлена 😉!'
-        case _:
-            raise Exception(f'Неожиданный результат {result} для метода "subscribe"!')
-
-    reply_message(
-        text=text,
-        update=update, context=context,
-        severity=SeverityEnum.INFO,
-        reply_markup=get_reply_keyboard(update),
-    )
-
-
-@log_func(log)
-def on_command_unsubscribe(update: Update, context: CallbackContext):
-    message = update.effective_message
-    user_id = message.from_user.id
-
-    result = db.Subscription.unsubscribe(user_id)
-    match result:
-        case SubscriptionResultEnum.ALREADY:
-            text = 'Подписка не оформлена 🤔!'
-        case SubscriptionResultEnum.UNSUBSCRIBE_OK:
-            text = 'Вы успешно отписались 😔'
-        case _:
-            raise Exception(f'Неожиданный результат {result} для метода "unsubscribe"!')
-
-    reply_message(
-        text=text,
-        update=update, context=context,
-        severity=SeverityEnum.INFO,
-        reply_markup=get_reply_keyboard(update),
     )
 
 
@@ -207,6 +164,50 @@ def on_command_get_all(update: Update, context: CallbackContext):
 
 
 @log_func(log)
+def on_command_subscribe(update: Update, context: CallbackContext):
+    message = update.effective_message
+    user_id = message.from_user.id
+
+    result = db.Subscription.subscribe(user_id)
+    match result:
+        case SubscriptionResultEnum.ALREADY:
+            text = 'Подписка уже оформлена 🤔!'
+        case SubscriptionResultEnum.SUBSCRIBE_OK:
+            text = 'Подписка успешно оформлена 😉!'
+        case _:
+            raise Exception(f'Неожиданный результат {result} для метода "subscribe"!')
+
+    reply_message(
+        text=text,
+        update=update, context=context,
+        severity=SeverityEnum.INFO,
+        reply_markup=get_reply_keyboard(update),
+    )
+
+
+@log_func(log)
+def on_command_unsubscribe(update: Update, context: CallbackContext):
+    message = update.effective_message
+    user_id = message.from_user.id
+
+    result = db.Subscription.unsubscribe(user_id)
+    match result:
+        case SubscriptionResultEnum.ALREADY:
+            text = 'Подписка не оформлена 🤔!'
+        case SubscriptionResultEnum.UNSUBSCRIBE_OK:
+            text = 'Вы успешно отписались 😔'
+        case _:
+            raise Exception(f'Неожиданный результат {result} для метода "unsubscribe"!')
+
+    reply_message(
+        text=text,
+        update=update, context=context,
+        severity=SeverityEnum.INFO,
+        reply_markup=get_reply_keyboard(update),
+    )
+
+
+@log_func(log)
 def on_request(update: Update, context: CallbackContext):
     reply_message(
         'Неизвестная команда 🤔',
@@ -222,9 +223,8 @@ def on_error(update: Update, context: CallbackContext):
 def setup(dp: Dispatcher):
     dp.add_handler(CommandHandler('start', on_start))
 
-    dp.add_handler(CommandHandler('admin_stats', on_get_admin_stats, FILTER_BY_ADMIN))
-    # TODO: В переменную и в regexp_patterns.py
-    dp.add_handler(MessageHandler(Filters.text('Статистика админа') & FILTER_BY_ADMIN, on_get_admin_stats))
+    dp.add_handler(CommandHandler(COMMAND_ADMIN_STATS, on_get_admin_stats, FILTER_BY_ADMIN))
+    dp.add_handler(MessageHandler(Filters.text(REPLY_ADMIN_STATS) & FILTER_BY_ADMIN, on_get_admin_stats))
 
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST), on_command_last))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_WEEK), on_command_last_by_week))
