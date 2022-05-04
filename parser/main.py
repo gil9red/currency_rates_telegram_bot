@@ -113,7 +113,7 @@ def run_parser():
 
         log.info(f'{prefix} Завершение')
 
-        time.sleep(8 * 60 * 60)  # 8 hours
+        time.sleep(60 * 60)  # Every 1 hour
 
 
 if __name__ == '__main__':
