@@ -89,9 +89,10 @@ def parse(date_req: DT.date, prefix: str = '[parse]'):
 def run_parser():
     prefix = f'[{caller_name()}]'
 
+    log.info(f'{prefix} Запуск')
+
     while True:
         start_date = db.ExchangeRate.get_last_date()
-        log.info(f'{prefix} Запуск проверки за {start_date}')
 
         i = 0
         for date_req in iter_dates(start_date):
@@ -111,9 +112,9 @@ def run_parser():
 
             i += 1
 
-        log.info(f'{prefix} Завершение')
-
         time.sleep(60 * 60)  # Every 1 hour
+
+    log.info(f'{prefix} Завершение')
 
 
 if __name__ == '__main__':
