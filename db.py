@@ -131,7 +131,7 @@ class BaseModel(Model):
 class ExchangeRate(BaseModel):
     date = DateField()
     currency_code = TextField()
-    value = DecimalField(decimal_places=4, auto_round=True)
+    value = DecimalField()
 
     class Meta:
         indexes = (
