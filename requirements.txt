@@ -1,0 +1,5 @@
+beautifulsoup4==4.10.0
+peewee==3.14.10
+python-telegram-bot==13.11
+requests==2.27.1
+matplotlib==3.5.1
