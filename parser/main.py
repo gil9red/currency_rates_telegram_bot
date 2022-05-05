@@ -55,7 +55,7 @@ def get_currencies(date: DT.date) -> tuple[DT.date, dict[str, Decimal]]:
 
     for s in root.find_all('valute'):
         currency = s.charcode.string
-        value = Decimal(s.value.string.replace(',', '.'))
+        value = Decimal(s.value.string.replace(',', '.')) / Decimal(s.nominal.string)
         currency_by_value[currency] = value
 
     return date, currency_by_value
@@ -120,6 +120,5 @@ def run_parser():
 if __name__ == '__main__':
     date, currency_by_value = get_currencies(DT.date.today())
     print(f'Дата {get_date_str(date)}. Валют ({len(currency_by_value)}): {currency_by_value}')
-    print()
 
     run_parser()
