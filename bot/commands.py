@@ -26,6 +26,7 @@ from bot.regexp_patterns import (
     COMMAND_ADMIN_STATS, REPLY_ADMIN_STATS,
     PATTERN_REPLY_SELECT_DATE, PATTERN_INLINE_SELECT_DATE,
     PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR,
+    CALLBACK_IGNORE,
     fill_string_pattern,
 )
 from bot.third_party import telegramcalendar
@@ -46,20 +47,41 @@ def get_reply_keyboard(update: Update) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(commands, resize_keyboard=True)
 
 
-# SOURCE: https://github.com/gil9red/get_metal_rates/blob/0f3c38bc4fc287504173471aefdaeb0e5e1ae98d/app_tg_bot/bot/commands.py#L48
+FORMAT_PREV = '❮ {}'
+FORMAT_CURRENT = '· {} ·'
+FORMAT_NEXT = '{} ❯'
+
+
 def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboardMarkup:
     prev_date, next_date = db.ExchangeRate.get_prev_next_dates(for_date)
+    pattern = PATTERN_INLINE_GET_BY_DATE
 
-    prev_date_str = f'❮ {get_date_str(prev_date)}' if prev_date else ''
-    prev_date_callback_data = fill_string_pattern(PATTERN_INLINE_GET_BY_DATE, prev_date if prev_date else '')
+    buttons = []
+    if prev_date:
+        buttons.append(
+            InlineKeyboardButton(
+                text=FORMAT_PREV.format(get_date_str(prev_date)),
+                callback_data=fill_string_pattern(pattern, prev_date),
+            )
+        )
 
-    next_date_str = f'{get_date_str(next_date)} ❯' if next_date else ''
-    next_date_callback_data = fill_string_pattern(PATTERN_INLINE_GET_BY_DATE, next_date if next_date else '')
+    # Текущий выбор
+    buttons.append(
+        InlineKeyboardButton(
+            text=FORMAT_CURRENT.format(get_date_str(for_date)),
+            callback_data=fill_string_pattern(pattern, CALLBACK_IGNORE),
+        )
+    )
 
-    return InlineKeyboardMarkup.from_row([
-        InlineKeyboardButton(text=prev_date_str, callback_data=prev_date_callback_data),
-        InlineKeyboardButton(text=next_date_str, callback_data=next_date_callback_data),
-    ])
+    if next_date:
+        buttons.append(
+            InlineKeyboardButton(
+                text=FORMAT_NEXT.format(get_date_str(next_date)),
+                callback_data=fill_string_pattern(pattern, next_date),
+            )
+        )
+
+    return InlineKeyboardMarkup.from_row(buttons)
 
 
 def get_inline_keyboard_for_year_pagination(year: int, currency_code: str) -> InlineKeyboardMarkup:
@@ -70,15 +92,23 @@ def get_inline_keyboard_for_year_pagination(year: int, currency_code: str) -> In
     if prev_year:
         buttons.append(
             InlineKeyboardButton(
-                text=f'❮ {prev_year}',
+                text=FORMAT_PREV.format(prev_year),
                 callback_data=fill_string_pattern(pattern, currency_code, prev_year),
             )
         )
 
+    # Текущий выбор
+    buttons.append(
+        InlineKeyboardButton(
+            text=FORMAT_CURRENT.format(year),
+            callback_data=fill_string_pattern(pattern, CALLBACK_IGNORE, CALLBACK_IGNORE),
+        )
+    )
+
     if next_year:
         buttons.append(
             InlineKeyboardButton(
-                text=f'{next_year} ❯',
+                text=FORMAT_NEXT.format(next_year),
                 callback_data=fill_string_pattern(pattern, currency_code, next_year)
             )
         )
@@ -98,8 +128,6 @@ def reply_or_edit_plot_with_keyboard(
 ):
     message = update.effective_message
     query = update.callback_query
-    if query:
-        query.answer()
 
     photo = get_plot_for_currency(
         currency_code=currency_code,
@@ -179,7 +207,11 @@ def on_command_last(update: Update, context: CallbackContext):
         query.answer()
 
     try:
-        for_date: DT.date = DT.date.fromisoformat(context.match.group(1))
+        value: str = context.match.group(1)
+        if value == CALLBACK_IGNORE:
+            return
+
+        for_date: DT.date = DT.date.fromisoformat(value)
     except:
         for_date: DT.date = db.ExchangeRate.get_last_date()
 
@@ -297,7 +329,13 @@ def on_command_get_all(update: Update, context: CallbackContext):
 
 @log_func(log)
 def on_get_all_by_year(update: Update, context: CallbackContext):
+    query = update.callback_query
+    if query:
+        query.answer()
+
     currency_code: str = context.match.group(1)
+    if currency_code == CALLBACK_IGNORE:
+        return
 
     year: int = int(context.match.group(2))
     if year == -1:

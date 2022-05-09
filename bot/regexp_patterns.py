@@ -21,6 +21,8 @@ PATTERN_INLINE_SELECT_DATE = re.compile(r'.+;\d+;\d+;\d+')  # NOTE: Формат
 
 PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR = re.compile(r'^get_chart currency=(.+) year=(.+)$')
 
+CALLBACK_IGNORE = 'IGNORE'
+
 COMMAND_LAST_BY_WEEK = 'За неделю'
 COMMAND_LAST_BY_MONTH = 'За месяц'
 COMMAND_GET_ALL = 'За всё время'
