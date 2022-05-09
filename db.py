@@ -8,7 +8,7 @@ import datetime as DT
 import enum
 import time
 from decimal import Decimal
-from typing import Type, List, Iterable, Optional
+from typing import Type, Iterable, Optional
 
 # pip install peewee
 from peewee import (
@@ -184,13 +184,13 @@ class ExchangeRate(BaseModel):
         )
 
     @classmethod
-    def get_last_rates(cls, currency_code: str, number: int = -1) -> List['ExchangeRate']:
+    def get_last_rates(cls, currency_code: str, number: int = -1) -> list['ExchangeRate']:
         dates = cls.get_last_dates(number)
         query = cls.select().where(cls.currency_code == currency_code, cls.date.in_(dates)).order_by(cls.date.asc())
         return list(query)
 
     @classmethod
-    def get_all_by_year(cls, currency_code: str, year: int) -> List['ExchangeRate']:
+    def get_all_by_year(cls, currency_code: str, year: int) -> list['ExchangeRate']:
         query = (
             cls.select()
                 .where(
