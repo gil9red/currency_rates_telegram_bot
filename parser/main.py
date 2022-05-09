@@ -33,11 +33,10 @@ def iter_dates(start_date: DT.date, end_date: DT.date = None) -> Iterator[DT.dat
 
     while True:
         date_req2 = get_next_date(date_req1)
-        yield date_req2
-
         if date_req2 > end_date:
             break
 
+        yield date_req2
         date_req1 = date_req2
 
 
@@ -93,6 +92,8 @@ def run_parser():
 
     while True:
         start_date = db.ExchangeRate.get_last_date()
+        if db.ExchangeRate.count():  # Для существующих записей проверка идет для следующей даты
+            start_date = get_next_date(start_date)
 
         i = 0
         for date_req in iter_dates(start_date):
