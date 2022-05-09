@@ -60,11 +60,17 @@ def draw_plot(
 def get_plot_for_currency(
     currency_code: str,
     number: int = -1,
+    year: int = None,
     title_format: str = "Стоимость {currency_code} в рублях за {start_date} - {end_date}",
 ) -> BytesIO:
+    if year:
+        rates = db.ExchangeRate.get_all_by_year(currency_code=currency_code, year=year)
+    else:
+        rates = db.ExchangeRate.get_last_rates(currency_code=currency_code, number=number)
+
     days = []
     values = []
-    for rate in db.ExchangeRate.get_last_rates(currency_code=currency_code, number=number):
+    for rate in rates:
         days.append(rate.date)
         values.append(rate.value)
 
@@ -104,4 +110,14 @@ if __name__ == '__main__':
     number = 7
     path = images_dir / f'graph_{currency_code}_={number}.png'
     photo = get_plot_for_currency(currency_code=currency_code, number=number)
+    path.write_bytes(photo.read())
+
+    year = 2021
+    path = images_dir / f'graph_{currency_code}_year{year}.png'
+    photo = get_plot_for_currency(currency_code=currency_code, year=year)
+    path.write_bytes(photo.read())
+
+    year = 2022
+    path = images_dir / f'graph_{currency_code}_year{year}.png'
+    photo = get_plot_for_currency(currency_code=currency_code, year=year)
     path.write_bytes(photo.read())
