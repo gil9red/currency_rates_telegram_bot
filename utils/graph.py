@@ -16,7 +16,7 @@ from matplotlib.figure import Figure
 
 import db
 from root_config import DATE_FORMAT
-from bot.common import get_date_str
+from root_common import get_date_str
 
 
 # SOURCE: https://github.com/gil9red/get_metal_rates/blob/480a9866194578b732bf6c64666784a031e98035/utils/draw_plot.py#L23

@@ -18,7 +18,8 @@ from peewee import (
 from playhouse.sqliteq import SqliteQueueDatabase
 
 from root_config import DB_FILE_NAME
-from bot.common import SubscriptionResultEnum, get_date_str, get_start_date, get_end_date
+from bot.common import SubscriptionResultEnum
+from root_common import get_start_date, get_end_date, get_date_str
 from parser.config import START_DATE
 
 

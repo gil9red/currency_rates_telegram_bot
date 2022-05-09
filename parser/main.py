@@ -13,7 +13,7 @@ import requests
 from bs4 import BeautifulSoup
 
 import db
-from bot.common import caller_name, get_date_str, get_logger
+from root_common import get_date_str, caller_name, get_logger
 from root_config import DIR_LOGS
 
 

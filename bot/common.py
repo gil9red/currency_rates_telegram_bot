@@ -4,16 +4,11 @@
 __author__ = 'ipetrash'
 
 
-import datetime as DT
 import enum
 import functools
 import json
-import inspect
 import logging
-import sys
 
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
 from typing import Union, Optional
 
 from telegram import Update, ReplyMarkup, InlineKeyboardMarkup, CallbackQuery, Message
@@ -22,54 +17,8 @@ from telegram.ext import CallbackContext
 from telegram.utils.types import FileInput
 from telegram.files.photosize import PhotoSize
 
-from root_config import DATE_FORMAT, DIR_LOGS, ERROR_TEXT, MAX_MESSAGE_LENGTH
-
-
-def get_start_date(year: int) -> DT.date:
-    return DT.date(year, 1, 1)
-
-
-def get_end_date(year: int) -> DT.date:
-    return DT.date(year + 1, 1, 1) - DT.timedelta(days=1)
-
-
-def get_date_str(date: DT.date) -> str:
-    return date.strftime(DATE_FORMAT)
-
-
-def caller_name() -> str:
-    """Return the calling function's name."""
-    return inspect.currentframe().f_back.f_code.co_name
-
-
-def get_logger(
-        name: str,
-        file: Union[str, Path] = 'log.txt',
-        encoding='utf-8',
-        log_stdout=True,
-        log_file=True
-) -> 'logging.Logger':
-    log = logging.getLogger(name)
-
-    # Возвращаем уже существующий логгер
-    if log.handlers:
-        return log
-
-    log.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s')
-
-    if log_file:
-        fh = RotatingFileHandler(file, maxBytes=10000000, backupCount=5, encoding=encoding)
-        fh.setFormatter(formatter)
-        log.addHandler(fh)
-
-    if log_stdout:
-        sh = logging.StreamHandler(stream=sys.stdout)
-        sh.setFormatter(formatter)
-        log.addHandler(sh)
-
-    return log
+from root_common import get_logger
+from root_config import DIR_LOGS, ERROR_TEXT, MAX_MESSAGE_LENGTH
 
 
 def log_func(log: logging.Logger):

@@ -9,7 +9,7 @@ import time
 from telegram import Bot, ParseMode
 
 import db
-from bot.common import caller_name, get_logger
+from root_common import caller_name, get_logger
 from root_config import DIR_LOGS, TOKEN, DEFAULT_CURRENCY_CODES  # TODO: Использовать настройки юзера
 
 

@@ -7,20 +7,25 @@ __author__ = 'ipetrash'
 import datetime as DT
 
 # pip install python-telegram-bot
-from telegram import Update, ReplyKeyboardMarkup, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import (
+    Update, ReplyKeyboardMarkup, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton, ReplyMarkup, InputMediaPhoto
+)
+from telegram.error import BadRequest
 from telegram.ext import Dispatcher, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 
 import db
 from root_config import USER_NAME_ADMINS, DEFAULT_CURRENCY_CODES, DEFAULT_CURRENCY_CODE
 from bot.common import (
-    get_date_str, log, log_func, process_error, reply_message, reply_text_or_edit_with_keyboard,
-    SeverityEnum, SubscriptionResultEnum
+    log, log_func, process_error, reply_message, reply_text_or_edit_with_keyboard,
+    SeverityEnum, SubscriptionResultEnum, is_equal_inline_keyboards
 )
+from root_common import get_date_str
 from bot.regexp_patterns import (
     PATTERN_INLINE_GET_BY_DATE, COMMAND_SUBSCRIBE, COMMAND_UNSUBSCRIBE,
     COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL,
     COMMAND_ADMIN_STATS, REPLY_ADMIN_STATS,
     PATTERN_REPLY_SELECT_DATE, PATTERN_INLINE_SELECT_DATE,
+    PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR,
     fill_string_pattern,
 )
 from bot.third_party import telegramcalendar
@@ -55,6 +60,79 @@ def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboard
         InlineKeyboardButton(text=prev_date_str, callback_data=prev_date_callback_data),
         InlineKeyboardButton(text=next_date_str, callback_data=next_date_callback_data),
     ])
+
+
+def get_inline_keyboard_for_year_pagination(year: int, currency_code: str) -> InlineKeyboardMarkup:
+    prev_year, next_year = db.ExchangeRate.get_prev_next_years(year=year, currency_code=currency_code)
+    pattern = PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR
+
+    buttons = []
+    if prev_year:
+        buttons.append(
+            InlineKeyboardButton(
+                text=f'❮ {prev_year}',
+                callback_data=fill_string_pattern(pattern, currency_code, prev_year),
+            )
+        )
+
+    if next_year:
+        buttons.append(
+            InlineKeyboardButton(
+                text=f'{next_year} ❯',
+                callback_data=fill_string_pattern(pattern, currency_code, next_year)
+            )
+        )
+
+    return InlineKeyboardMarkup.from_row(buttons)
+
+
+def reply_or_edit_plot_with_keyboard(
+    update: Update,
+    currency_code: str,
+    number: int = -1,
+    year: int = None,
+    title: str = '',
+    reply_markup: ReplyMarkup = None,
+    quote: bool = True,
+    **kwargs,
+):
+    message = update.effective_message
+    query = update.callback_query
+    if query:
+        query.answer()
+
+    photo = get_plot_for_currency(
+        currency_code=currency_code,
+        number=number,
+        year=year,
+    )
+
+    # Для запросов CallbackQuery нужно менять текущее сообщение
+    if query:
+        # Fix error: "telegram.error.BadRequest: Message is not modified"
+        if reply_markup and is_equal_inline_keyboards(reply_markup, query.message.reply_markup):
+            return
+
+        try:
+            message.edit_media(
+                media=InputMediaPhoto(media=photo, caption=title),
+                reply_markup=reply_markup,
+                **kwargs,
+            )
+        except BadRequest as e:
+            if 'Message is not modified' in str(e):
+                return
+
+            raise e
+
+    else:
+        message.reply_photo(
+            photo=photo,
+            caption=title,
+            reply_markup=reply_markup,
+            quote=quote,
+            **kwargs,
+        )
 
 
 @log_func(log)
@@ -208,7 +286,33 @@ def on_command_get_all(update: Update, context: CallbackContext):
         ),
         update=update, context=context,
         parse_mode=ParseMode.HTML,
-        reply_markup=get_reply_keyboard(update)
+        reply_markup=InlineKeyboardMarkup.from_button(
+            InlineKeyboardButton(
+                text='Посмотреть за определенный год',
+                callback_data=fill_string_pattern(PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR, currency_code, -1)
+            )
+        ),
+    )
+
+
+@log_func(log)
+def on_get_all_by_year(update: Update, context: CallbackContext):
+    currency_code: str = context.match.group(1)
+
+    year: int = int(context.match.group(2))
+    if year == -1:
+        year = db.ExchangeRate.get_last_date().year
+
+    reply_or_edit_plot_with_keyboard(
+        update=update,
+        currency_code=currency_code,
+        year=year,
+        title=f"Стоимость {currency_code} в рублях за {year}",
+        # TODO: Возможность указывать другие валюты из настроек юзера
+        reply_markup=get_inline_keyboard_for_year_pagination(
+            year=year,
+            currency_code=currency_code,
+        ),
     )
 
 
@@ -284,6 +388,8 @@ def setup(dp: Dispatcher):
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_WEEK), on_command_last_by_week))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_MONTH), on_command_last_by_month))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_GET_ALL), on_command_get_all))
+
+    dp.add_handler(CallbackQueryHandler(on_get_all_by_year, pattern=PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR))
 
     dp.add_handler(MessageHandler(Filters.text(COMMAND_SUBSCRIBE), on_command_subscribe))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_UNSUBSCRIBE), on_command_unsubscribe))
