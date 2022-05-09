@@ -29,23 +29,16 @@ from bot.regexp_patterns import (
     CALLBACK_IGNORE,
     fill_string_pattern,
 )
+from bot.third_party.auto_in_progress_message import show_temp_message_decorator, ProgressValue
 from bot.third_party import telegramcalendar
+
 from utils.graph import get_plot_for_currency
 
 
 FILTER_BY_ADMIN = Filters.user(username=USER_NAME_ADMINS)
 
-
-def get_reply_keyboard(update: Update) -> ReplyKeyboardMarkup:
-    is_active = db.Subscription.has_is_active(update.effective_user.id)
-
-    commands = [
-        [COMMAND_LAST, fill_string_pattern(PATTERN_REPLY_SELECT_DATE)],
-        [COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL],
-        [COMMAND_UNSUBSCRIBE if is_active else COMMAND_SUBSCRIBE]
-    ]
-    return ReplyKeyboardMarkup(commands, resize_keyboard=True)
-
+TEXT_SHOW_TEMP_MESSAGE = SeverityEnum.INFO.get_text('Пожалуйста, подождите {value}')
+PROGRESS_VALUE = ProgressValue.RECTS_SMALL
 
 FORMAT_PREV = '❮ {}'
 FORMAT_CURRENT = '· {} ·'
@@ -114,6 +107,17 @@ def get_inline_keyboard_for_year_pagination(year: int, currency_code: str) -> In
         )
 
     return InlineKeyboardMarkup.from_row(buttons)
+
+
+def get_reply_keyboard(update: Update) -> ReplyKeyboardMarkup:
+    is_active = db.Subscription.has_is_active(update.effective_user.id)
+
+    commands = [
+        [COMMAND_LAST, fill_string_pattern(PATTERN_REPLY_SELECT_DATE)],
+        [COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL],
+        [COMMAND_UNSUBSCRIBE if is_active else COMMAND_SUBSCRIBE]
+    ]
+    return ReplyKeyboardMarkup(commands, resize_keyboard=True)
 
 
 def reply_or_edit_plot_with_keyboard(
@@ -305,6 +309,10 @@ def on_command_last_by_month(update: Update, context: CallbackContext):
 
 
 @log_func(log)
+@show_temp_message_decorator(
+    text=TEXT_SHOW_TEMP_MESSAGE,
+    progress_value=PROGRESS_VALUE,
+)
 def on_command_get_all(update: Update, context: CallbackContext):
     currency_code = DEFAULT_CURRENCY_CODE
     number = -1
