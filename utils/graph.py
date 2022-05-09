@@ -26,7 +26,7 @@ def draw_plot(
         values: list[Decimal],
         locator: mdates.DateLocator = None,
         title: str = None,
-        color: str = 'orange',
+        color: str = '',
         date_format: str = DATE_FORMAT,
         axis_off: bool = False,
 ):
@@ -39,7 +39,8 @@ def draw_plot(
     ax.xaxis.set_major_locator(locator)
 
     lines = ax.plot(days, values)[0]
-    lines.set_color(color)
+    if color:
+        lines.set_color(color)
 
     if title:
         ax.set_xlabel(title)
