@@ -53,8 +53,8 @@ FORMAT_NEXT = '{} ❯'
 
 
 def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboardMarkup:
-    prev_date, next_date = db.ExchangeRate.get_prev_next_dates(for_date)
     pattern = PATTERN_INLINE_GET_BY_DATE
+    prev_date, next_date = db.ExchangeRate.get_prev_next_dates(for_date)
 
     buttons = []
     if prev_date:
@@ -85,8 +85,8 @@ def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboard
 
 
 def get_inline_keyboard_for_year_pagination(year: int, currency_code: str) -> InlineKeyboardMarkup:
-    prev_year, next_year = db.ExchangeRate.get_prev_next_years(year=year, currency_code=currency_code)
     pattern = PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR
+    prev_year, next_year = db.ExchangeRate.get_prev_next_years(year=year, currency_code=currency_code)
 
     buttons = []
     if prev_year:
