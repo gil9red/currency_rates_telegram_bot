@@ -189,6 +189,21 @@ class ExchangeRate(BaseModel):
         return list(query)
 
     @classmethod
+    def get_all_by_year(cls, currency_code: str, year: int) -> List['ExchangeRate']:
+        start_date = DT.date(year, 1, 1)
+        end_date = DT.date(year + 1, 1, 1) - DT.timedelta(days=1)
+        query = (
+            cls.select()
+                .where(
+                    cls.currency_code == currency_code,
+                    cls.date >= start_date,
+                    cls.date <= end_date
+                )
+                .order_by(cls.date.asc())
+        )
+        return list(query)
+
+    @classmethod
     def get_prev_next_dates(cls, date: DT.date, currency_code: str = None) -> tuple[DT.date, DT.date]:
         filters = [cls.date < date]
         if currency_code:
