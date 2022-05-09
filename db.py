@@ -226,9 +226,6 @@ class ExchangeRate(BaseModel):
             # Если разница целочисленная, то оставляем целым числом
             if abs_diff % 1 == 0:
                 abs_diff = int(abs_diff)
-            else:
-                # Иначе вещественным, но с точностью в 2 знака
-                abs_diff = f'{abs_diff:.4f}'
 
             sign = "-" if diff < 0 else "+"
             return f'{sign}{abs_diff}'
@@ -239,7 +236,7 @@ class ExchangeRate(BaseModel):
             prev_rate = self.get_by(date=prev_date, currency_code=self.currency_code)
             text_diff_value = f' ({get_diff_str(prev_rate.value, self.value)})'
 
-        return f'{self.currency_code}: {self.value:.4f}{text_diff_value}'
+        return f'{self.currency_code}: {self.value}{text_diff_value}'
 
     @classmethod
     def get_full_description(cls, currency_code_list: list[str], date: DT.date = None, show_diff: bool = True) -> str:
