@@ -25,6 +25,14 @@ from telegram.files.photosize import PhotoSize
 from root_config import DATE_FORMAT, DIR_LOGS, ERROR_TEXT, MAX_MESSAGE_LENGTH
 
 
+def get_start_date(year: int) -> DT.date:
+    return DT.date(year, 1, 1)
+
+
+def get_end_date(year: int) -> DT.date:
+    return DT.date(year + 1, 1, 1) - DT.timedelta(days=1)
+
+
 def get_date_str(date: DT.date) -> str:
     return date.strftime(DATE_FORMAT)
 

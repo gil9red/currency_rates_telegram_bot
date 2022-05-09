@@ -18,7 +18,7 @@ from peewee import (
 from playhouse.sqliteq import SqliteQueueDatabase
 
 from root_config import DB_FILE_NAME
-from bot.common import get_date_str, SubscriptionResultEnum
+from bot.common import SubscriptionResultEnum, get_date_str, get_start_date, get_end_date
 from parser.config import START_DATE
 
 
@@ -190,14 +190,12 @@ class ExchangeRate(BaseModel):
 
     @classmethod
     def get_all_by_year(cls, currency_code: str, year: int) -> List['ExchangeRate']:
-        start_date = DT.date(year, 1, 1)
-        end_date = DT.date(year + 1, 1, 1) - DT.timedelta(days=1)
         query = (
             cls.select()
                 .where(
                     cls.currency_code == currency_code,
-                    cls.date >= start_date,
-                    cls.date <= end_date
+                    cls.date >= get_start_date(year),
+                    cls.date <= get_end_date(year)
                 )
                 .order_by(cls.date.asc())
         )
@@ -232,6 +230,36 @@ class ExchangeRate(BaseModel):
         next_date = next_val.date if next_val else None
 
         return prev_date, next_date
+
+    @classmethod
+    def get_prev_next_years(cls, year: int, currency_code: str = None) -> tuple[int, int]:
+        filters = [cls.date < get_start_date(year)]
+        if currency_code:
+            filters.append(cls.currency_code == currency_code)
+        prev_val = (
+            cls.select(cls.date)
+                .distinct()
+                .where(*filters)
+                .limit(1)
+                .order_by(cls.date.desc())
+                .first()
+        )
+        prev_year = prev_val.date.year if prev_val else None
+
+        filters = [cls.date > get_end_date(year)]
+        if currency_code:
+            filters.append(cls.currency_code == currency_code)
+        next_val = (
+            cls.select(cls.date)
+                .distinct()
+                .where(*filters)
+                .limit(1)
+                .order_by(cls.date.asc())
+                .first()
+        )
+        next_year = next_val.date.year if next_val else None
+
+        return prev_year, next_year
 
     def get_description(self, show_diff: bool = True) -> str:
         def get_diff_str(prev_amt: DecimalField, next_amt: DecimalField) -> str:
@@ -354,3 +382,9 @@ if __name__ == '__main__':
         print(rate)
         print(rate.get_description())
         print()
+
+    assert ExchangeRate.get_prev_next_years(year=1000) == (None, START_DATE.year)
+    assert ExchangeRate.get_prev_next_years(year=3000) == (ExchangeRate.get_last_date().year, None)
+    for year in range(START_DATE.year + 1, ExchangeRate.get_last_date().year):
+        assert ExchangeRate.get_prev_next_years(year=year) == (year - 1, year + 1), \
+            f'Неправильно определилось значение для {year}'
