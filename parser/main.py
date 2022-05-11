@@ -62,6 +62,7 @@ def get_currencies(date: DT.date) -> tuple[DT.date, dict[str, Decimal]]:
 
 def parse(date_req: DT.date, prefix: str = '[parse]'):
     date, currency_by_value = get_currencies(date_req)
+    log.debug(f'{prefix} Получена дата {date}, валют {len(currency_by_value)}')
 
     # Не за все даты на сайте есть информация
     if date != date_req:
@@ -97,6 +98,8 @@ def run_parser():
 
         i = 0
         for date_req in iter_dates(start_date):
+            log.debug(f'{prefix} проверка для {date_req}')
+
             while True:
                 try:
                     parse(date_req, prefix=prefix)
