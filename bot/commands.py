@@ -77,7 +77,7 @@ def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboard
     return InlineKeyboardMarkup.from_row(buttons)
 
 
-def get_inline_keyboard_for_year_pagination(year: int, currency_code: str) -> InlineKeyboardMarkup:
+def get_inline_keyboard_for_year_pagination(currency_code: str, year: int) -> InlineKeyboardMarkup:
     pattern = PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR
     prev_year, next_year = db.ExchangeRate.get_prev_next_years(year=year, currency_code=currency_code)
 
@@ -356,8 +356,8 @@ def on_get_all_by_year(update: Update, context: CallbackContext):
         title=f"Стоимость {currency_code} в рублях за {year}",
         # TODO: Возможность указывать другие валюты из настроек юзера
         reply_markup=get_inline_keyboard_for_year_pagination(
-            year=year,
             currency_code=currency_code,
+            year=year,
         ),
     )
 
