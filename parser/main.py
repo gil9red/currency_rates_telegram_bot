@@ -98,7 +98,7 @@ def run_parser():
 
         i = 0
         for date_req in iter_dates(start_date):
-            log.debug(f'{prefix} проверка для {date_req}')
+            log.debug(f'{prefix} Проверка для {date_req}')
 
             while True:
                 try:
