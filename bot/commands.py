@@ -77,36 +77,52 @@ def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboard
     return InlineKeyboardMarkup.from_row(buttons)
 
 
-def get_inline_keyboard_for_year_pagination(currency_code: str, year: int) -> InlineKeyboardMarkup:
+def get_inline_keyboard_for_year_pagination(current_currency_code: str, current_year: int) -> InlineKeyboardMarkup:
     pattern = PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR
-    prev_year, next_year = db.ExchangeRate.get_prev_next_years(year=year, currency_code=currency_code)
 
-    buttons = []
+    # Список из 2 списков
+    buttons: list[list[InlineKeyboardButton]] = [[], []]
+
+    for currency_code in DEFAULT_CURRENCY_CODES:
+        is_current = current_currency_code == currency_code
+
+        buttons[0].append(
+            InlineKeyboardButton(
+                text=FORMAT_CURRENT.format(currency_code) if is_current else currency_code,
+                callback_data=fill_string_pattern(
+                    pattern,
+                    CALLBACK_IGNORE if is_current else currency_code,
+                    CALLBACK_IGNORE if is_current else current_year
+                )
+            )
+        )
+
+    prev_year, next_year = db.ExchangeRate.get_prev_next_years(year=current_year, currency_code=current_currency_code)
     if prev_year:
-        buttons.append(
+        buttons[1].append(
             InlineKeyboardButton(
                 text=FORMAT_PREV.format(prev_year),
-                callback_data=fill_string_pattern(pattern, currency_code, prev_year),
+                callback_data=fill_string_pattern(pattern, current_currency_code, prev_year),
             )
         )
 
     # Текущий выбор
-    buttons.append(
+    buttons[1].append(
         InlineKeyboardButton(
-            text=FORMAT_CURRENT.format(year),
+            text=FORMAT_CURRENT.format(current_year),
             callback_data=fill_string_pattern(pattern, CALLBACK_IGNORE, CALLBACK_IGNORE),
         )
     )
 
     if next_year:
-        buttons.append(
+        buttons[1].append(
             InlineKeyboardButton(
                 text=FORMAT_NEXT.format(next_year),
-                callback_data=fill_string_pattern(pattern, currency_code, next_year)
+                callback_data=fill_string_pattern(pattern, current_currency_code, next_year)
             )
         )
 
-    return InlineKeyboardMarkup.from_row(buttons)
+    return InlineKeyboardMarkup(buttons)
 
 
 def get_reply_keyboard(update: Update) -> ReplyKeyboardMarkup:
@@ -356,8 +372,8 @@ def on_get_all_by_year(update: Update, context: CallbackContext):
         title=f"Стоимость {currency_code} в рублях за {year}",
         # TODO: Возможность указывать другие валюты из настроек юзера
         reply_markup=get_inline_keyboard_for_year_pagination(
-            currency_code=currency_code,
-            year=year,
+            current_currency_code=currency_code,
+            current_year=year,
         ),
     )
 
