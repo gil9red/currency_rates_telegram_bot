@@ -30,6 +30,8 @@ def sending_notifications():
             if not subscriptions:
                 continue
 
+            log.info(f'{prefix} Выполняется рассылка к {len(subscriptions)} пользователям')
+
             text = f'<b>Рассылка</b>\n{db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CODES)}'
             for subscription in subscriptions:
                 bot.send_message(
