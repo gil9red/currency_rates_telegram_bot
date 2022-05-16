@@ -59,15 +59,15 @@ def draw_plot(
 
 
 def get_plot_for_currency(
-    currency_code: str,
+    currency_char_code: str,
     number: int = -1,
     year: int = None,
-    title_format: str = "Стоимость {currency_code} в рублях за {start_date} - {end_date}",
+    title_format: str = "Стоимость {currency_char_code} в рублях за {start_date} - {end_date}",
 ) -> BytesIO:
     if year:
-        rates = db.ExchangeRate.get_all_by_year(currency_code=currency_code, year=year)
+        rates = db.ExchangeRate.get_all_by_year(currency_char_code=currency_char_code, year=year)
     else:
-        rates = db.ExchangeRate.get_last_rates(currency_code=currency_code, number=number)
+        rates = db.ExchangeRate.get_last_rates(currency_char_code=currency_char_code, number=number)
 
     days = []
     values = []
@@ -76,7 +76,7 @@ def get_plot_for_currency(
         values.append(rate.value)
 
     title = title_format.format(
-        currency_code=currency_code,
+        currency_char_code=currency_char_code,
         start_date=get_date_str(days[0]),
         end_date=get_date_str(days[-1])
     )
@@ -96,29 +96,29 @@ if __name__ == '__main__':
     images_dir = current_dir / 'chart_images'
     images_dir.mkdir(parents=True, exist_ok=True)
 
-    currency_code = 'USD'
+    currency_char_code = 'USD'
 
     number = -1
-    path = images_dir / f'graph_{currency_code}_={number}.png'
-    photo = get_plot_for_currency(currency_code=currency_code, number=number)
+    path = images_dir / f'graph_{currency_char_code}_={number}.png'
+    photo = get_plot_for_currency(currency_char_code=currency_char_code, number=number)
     path.write_bytes(photo.read())
 
     number = 30
-    path = images_dir / f'graph_{currency_code}_={number}.png'
-    photo = get_plot_for_currency(currency_code=currency_code, number=number)
+    path = images_dir / f'graph_{currency_char_code}_={number}.png'
+    photo = get_plot_for_currency(currency_char_code=currency_char_code, number=number)
     path.write_bytes(photo.read())
 
     number = 7
-    path = images_dir / f'graph_{currency_code}_={number}.png'
-    photo = get_plot_for_currency(currency_code=currency_code, number=number)
+    path = images_dir / f'graph_{currency_char_code}_={number}.png'
+    photo = get_plot_for_currency(currency_char_code=currency_char_code, number=number)
     path.write_bytes(photo.read())
 
     year = 2021
-    path = images_dir / f'graph_{currency_code}_year{year}.png'
-    photo = get_plot_for_currency(currency_code=currency_code, year=year)
+    path = images_dir / f'graph_{currency_char_code}_year{year}.png'
+    photo = get_plot_for_currency(currency_char_code=currency_char_code, year=year)
     path.write_bytes(photo.read())
 
     year = 2022
-    path = images_dir / f'graph_{currency_code}_year{year}.png'
-    photo = get_plot_for_currency(currency_code=currency_code, year=year)
+    path = images_dir / f'graph_{currency_char_code}_year{year}.png'
+    photo = get_plot_for_currency(currency_char_code=currency_char_code, year=year)
     path.write_bytes(photo.read())

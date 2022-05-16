@@ -94,25 +94,25 @@ def parse(date_req: DT.date, prefix: str = '[parse]'):
         return
 
     old_count = db.ExchangeRate.count()
-    for currency_code, currency in currency_by_value.items():
+    for currency_char_code, currency in currency_by_value.items():
         number_code = currency.num_code
         if not db.Currency.get_by(number_code=number_code):
             db.Currency.add(
                 number_code=number_code,
-                alpha3code=currency.char_code,
+                char_code=currency.char_code,
                 title=currency.name,
             )
             log.info(f'{prefix} Добавлена валюта: {currency}')
 
-        rate = db.ExchangeRate.get_by(date=date, currency_code=currency_code)
+        rate = db.ExchangeRate.get_by(date=date, currency_char_code=currency_char_code)
         if not rate:
             value = currency.raw_value
             db.ExchangeRate.add(
                 date=date,
-                currency_code=currency_code,
+                currency_char_code=currency_char_code,
                 value=value,
             )
-            log.info(f'{prefix} За {get_date_str(date)} добавлено {currency_code} = {value}')
+            log.info(f'{prefix} За {get_date_str(date)} добавлено {currency_char_code} = {value}')
 
     diff_count = db.ExchangeRate.count() - old_count
     if diff_count > 0:

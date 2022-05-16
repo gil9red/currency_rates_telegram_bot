@@ -140,8 +140,8 @@ class ExchangeRate(BaseModel):
         )
 
     @classmethod
-    def get_by(cls, date: DT.date, currency_code: str) -> Optional['ExchangeRate']:
-        return cls.get_or_none(date=date, currency_code=currency_code)
+    def get_by(cls, date: DT.date, currency_char_code: str) -> Optional['ExchangeRate']:
+        return cls.get_or_none(date=date, currency_code=currency_char_code)
 
     @classmethod
     def has_date(cls, date: DT.date) -> bool:
@@ -151,14 +151,14 @@ class ExchangeRate(BaseModel):
     def add(
             cls,
             date: DT.date,
-            currency_code: str,
+            currency_char_code: str,
             value: Decimal,
     ) -> 'ExchangeRate':
-        obj = cls.get_by(date=date, currency_code=currency_code)
+        obj = cls.get_by(date=date, currency_char_code=currency_char_code)
         if not obj:
             obj = cls.create(
                 date=date,
-                currency_code=currency_code,
+                currency_code=currency_char_code,
                 value=value,
             )
 
@@ -177,36 +177,36 @@ class ExchangeRate(BaseModel):
         return cls.get_last_dates(number=1)[0]
 
     @classmethod
-    def get_last_by(cls, currency_code: str) -> Optional['ExchangeRate']:
+    def get_last_by(cls, currency_char_code: str) -> Optional['ExchangeRate']:
         return cls.get_by(
             date=cls.get_last_date(),
-            currency_code=currency_code,
+            currency_char_code=currency_char_code,
         )
 
     @classmethod
-    def get_last_rates(cls, currency_code: str, number: int = -1) -> list['ExchangeRate']:
+    def get_last_rates(cls, currency_char_code: str, number: int = -1) -> list['ExchangeRate']:
         dates = cls.get_last_dates(number)
-        query = cls.select().where(cls.currency_code == currency_code, cls.date.in_(dates)).order_by(cls.date.asc())
+        query = cls.select().where(cls.currency_code == currency_char_code, cls.date.in_(dates)).order_by(cls.date.asc())
         return list(query)
 
     @classmethod
-    def get_all_by_year(cls, currency_code: str, year: int) -> list['ExchangeRate']:
+    def get_all_by_year(cls, currency_char_code: str, year: int) -> list['ExchangeRate']:
         query = (
             cls.select()
                 .where(
-                    cls.currency_code == currency_code,
-                    cls.date >= get_start_date(year),
-                    cls.date <= get_end_date(year)
+                cls.currency_code == currency_char_code,
+                cls.date >= get_start_date(year),
+                cls.date <= get_end_date(year)
                 )
                 .order_by(cls.date.asc())
         )
         return list(query)
 
     @classmethod
-    def get_prev_next_dates(cls, date: DT.date, currency_code: str = None) -> tuple[DT.date, DT.date]:
+    def get_prev_next_dates(cls, date: DT.date, currency_char_code: str = None) -> tuple[DT.date, DT.date]:
         filters = [cls.date < date]
-        if currency_code:
-            filters.append(cls.currency_code == currency_code)
+        if currency_char_code:
+            filters.append(cls.currency_code == currency_char_code)
         prev_val = (
             cls.select(cls.date)
                 .distinct()
@@ -218,8 +218,8 @@ class ExchangeRate(BaseModel):
         prev_date = prev_val.date if prev_val else None
 
         filters = [cls.date > date]
-        if currency_code:
-            filters.append(cls.currency_code == currency_code)
+        if currency_char_code:
+            filters.append(cls.currency_code == currency_char_code)
         next_val = (
             cls.select(cls.date)
                 .distinct()
@@ -233,10 +233,10 @@ class ExchangeRate(BaseModel):
         return prev_date, next_date
 
     @classmethod
-    def get_prev_next_years(cls, year: int, currency_code: str = None) -> tuple[int, int]:
+    def get_prev_next_years(cls, year: int, currency_char_code: str = None) -> tuple[int, int]:
         filters = [cls.date < get_start_date(year)]
-        if currency_code:
-            filters.append(cls.currency_code == currency_code)
+        if currency_char_code:
+            filters.append(cls.currency_code == currency_char_code)
         prev_val = (
             cls.select(cls.date)
                 .distinct()
@@ -248,8 +248,8 @@ class ExchangeRate(BaseModel):
         prev_year = prev_val.date.year if prev_val else None
 
         filters = [cls.date > get_end_date(year)]
-        if currency_code:
-            filters.append(cls.currency_code == currency_code)
+        if currency_char_code:
+            filters.append(cls.currency_code == currency_char_code)
         next_val = (
             cls.select(cls.date)
                 .distinct()
@@ -274,24 +274,24 @@ class ExchangeRate(BaseModel):
             sign = "-" if diff < 0 else "+"
             return f'{sign}{abs_diff}'
 
-        prev_date, _ = self.get_prev_next_dates(date=self.date, currency_code=self.currency_code)
+        prev_date, _ = self.get_prev_next_dates(date=self.date, currency_char_code=self.currency_code)
         text_diff_value = ''
         if prev_date and show_diff:
-            prev_rate = self.get_by(date=prev_date, currency_code=self.currency_code)
+            prev_rate = self.get_by(date=prev_date, currency_char_code=self.currency_code)
             text_diff_value = f' ({get_diff_str(prev_rate.value, self.value)})'
 
         return f'{self.currency_code}: {self.value}{text_diff_value}'
 
     @classmethod
-    def get_full_description(cls, currency_code_list: list[str], date: DT.date = None, show_diff: bool = True) -> str:
+    def get_full_description(cls, currency_char_code_list: list[str], date: DT.date = None, show_diff: bool = True) -> str:
         if not date:
             date = cls.get_last_date()
 
         lines = [
             f'Актуальный курс за <b><u>{get_date_str(date)}</u></b>:'
         ]
-        for currency_code in currency_code_list:
-            rate = cls.get_by(date, currency_code)
+        for currency_char_code in currency_char_code_list:
+            rate = cls.get_by(date, currency_char_code)
             if rate:
                 lines.append(f'    {rate.get_description(show_diff)}')
 
@@ -299,42 +299,42 @@ class ExchangeRate(BaseModel):
 
 
 class Currency(BaseModel):
-    alpha3code = CharField(unique=True)
+    char_code = CharField(unique=True)
     title = CharField()
 
     @classmethod
     def get_by(
             cls,
             number_code: Union[int, str] = None,
-            alpha3code: str = None
+            char_code: str = None
     ) -> Optional['Currency']:
         if number_code:
             return cls.get_or_none(id=number_code)
-        elif alpha3code:
-            return cls.get_or_none(alpha3code=alpha3code)
+        elif char_code:
+            return cls.get_or_none(char_code=char_code)
         else:
-            raise Exception('Параметры number_code или alpha3code должны быть заполнены!')
+            raise Exception('Один из параметров должен быть заполнен!')
 
     @classmethod
     def add(
             cls,
             number_code: Union[int, str],
-            alpha3code: str,
+            char_code: str,
             title: str,
     ) -> 'Currency':
-        obj = cls.get_by(number_code=number_code, alpha3code=alpha3code)
+        obj = cls.get_by(number_code=number_code, char_code=char_code)
         if not obj:
             obj = cls.create(
                 id=number_code,
-                alpha3code=alpha3code,
+                char_code=char_code,
                 title=title,
             )
 
         return obj
 
     @classmethod
-    def get_all_alpha3code(cls) -> list[str]:
-        return [obj.alpha3code for obj in cls.select(cls.alpha3code)]
+    def get_all_char_codes(cls) -> list[str]:
+        return [obj.char_code for obj in cls.select(cls.char_code)]
 
 
 class Subscription(BaseModel):
@@ -407,14 +407,15 @@ if __name__ == '__main__':
     print(ExchangeRate.get_prev_next_dates(DT.date.today()))
     print()
 
-    print(get_date_str(ExchangeRate.get_last().date))
+    last_rate = ExchangeRate.get_last()
+    print(last_rate and get_date_str(last_rate.date))
     print()
 
     print('\n' + '-' * 10 + '\n')
 
     rate = ExchangeRate.get_last_by('USD')
     print(rate)
-    print(rate.get_description())
+    print(rate and rate.get_description())
 
     print('\n' + '-' * 10 + '\n')
 
@@ -431,4 +432,4 @@ if __name__ == '__main__':
 
     assert Currency.get_by(number_code=36) == Currency.get_by(number_code="36")
     assert Currency.get_by(number_code=36) == Currency.get_by(number_code="036")
-    assert Currency.get_by(number_code=36) == Currency.get_by(alpha3code="AUD")
+    assert Currency.get_by(number_code=36) == Currency.get_by(char_code="AUD")

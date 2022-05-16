@@ -14,7 +14,7 @@ from telegram.error import BadRequest
 from telegram.ext import Dispatcher, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 
 import db
-from root_config import USER_NAME_ADMINS, DEFAULT_CURRENCY_CODES, DEFAULT_CURRENCY_CODE
+from root_config import USER_NAME_ADMINS, DEFAULT_CURRENCY_CHAR_CODES, DEFAULT_CURRENCY_CHAR_CODE
 from bot.common import (
     log, log_func, process_error, reply_message, reply_text_or_edit_with_keyboard,
     SeverityEnum, SubscriptionResultEnum, is_equal_inline_keyboards
@@ -43,6 +43,15 @@ PROGRESS_VALUE = ProgressValue.RECTS_SMALL
 FORMAT_PREV = '❮ {}'
 FORMAT_CURRENT = '· {} ·'
 FORMAT_NEXT = '{} ❯'
+
+FORMAT_CHECKBOX = '✅ {}'
+FORMAT_CHECKBOX_EMPTY = '⬜ {}'
+
+
+all_currency_char_codes = list(DEFAULT_CURRENCY_CHAR_CODES)
+for char_code in db.Currency.get_all_char_codes():
+    if char_code not in all_currency_char_codes:
+        all_currency_char_codes.append(char_code)
 
 
 def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboardMarkup:
@@ -77,32 +86,32 @@ def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboard
     return InlineKeyboardMarkup.from_row(buttons)
 
 
-def get_inline_keyboard_for_year_pagination(current_currency_code: str, current_year: int) -> InlineKeyboardMarkup:
+def get_inline_keyboard_for_year_pagination(current_currency_char_code: str, current_year: int) -> InlineKeyboardMarkup:
     pattern = PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR
 
     # Список из 2 списков
     buttons: list[list[InlineKeyboardButton]] = [[], []]
 
-    for currency_code in DEFAULT_CURRENCY_CODES:
-        is_current = current_currency_code == currency_code
+    for currency_char_code in DEFAULT_CURRENCY_CHAR_CODES:
+        is_current = current_currency_char_code == currency_char_code
 
         buttons[0].append(
             InlineKeyboardButton(
-                text=FORMAT_CURRENT.format(currency_code) if is_current else currency_code,
+                text=FORMAT_CURRENT.format(currency_char_code) if is_current else currency_char_code,
                 callback_data=fill_string_pattern(
                     pattern,
-                    CALLBACK_IGNORE if is_current else currency_code,
+                    CALLBACK_IGNORE if is_current else currency_char_code,
                     CALLBACK_IGNORE if is_current else current_year
                 )
             )
         )
 
-    prev_year, next_year = db.ExchangeRate.get_prev_next_years(year=current_year, currency_code=current_currency_code)
+    prev_year, next_year = db.ExchangeRate.get_prev_next_years(year=current_year, currency_char_code=current_currency_char_code)
     if prev_year:
         buttons[1].append(
             InlineKeyboardButton(
                 text=FORMAT_PREV.format(prev_year),
-                callback_data=fill_string_pattern(pattern, current_currency_code, prev_year),
+                callback_data=fill_string_pattern(pattern, current_currency_char_code, prev_year),
             )
         )
 
@@ -118,7 +127,7 @@ def get_inline_keyboard_for_year_pagination(current_currency_code: str, current_
         buttons[1].append(
             InlineKeyboardButton(
                 text=FORMAT_NEXT.format(next_year),
-                callback_data=fill_string_pattern(pattern, current_currency_code, next_year)
+                callback_data=fill_string_pattern(pattern, current_currency_char_code, next_year)
             )
         )
 
@@ -138,7 +147,7 @@ def get_reply_keyboard(update: Update) -> ReplyKeyboardMarkup:
 
 def reply_or_edit_plot_with_keyboard(
     update: Update,
-    currency_code: str,
+    currency_char_code: str,
     number: int = -1,
     year: int = None,
     title: str = '',
@@ -150,7 +159,7 @@ def reply_or_edit_plot_with_keyboard(
     query = update.callback_query
 
     photo = get_plot_for_currency(
-        currency_code=currency_code,
+        currency_char_code=currency_char_code,
         number=number,
         year=year,
     )
@@ -236,7 +245,7 @@ def on_command_last(update: Update, context: CallbackContext):
         for_date: DT.date = db.ExchangeRate.get_last_date()
 
     # TODO: Default currency code? Или мб брать первую валюту из настроек?
-    text = db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CODES, for_date)
+    text = db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CHAR_CODES, for_date)
 
     reply_text_or_edit_with_keyboard(
         message=message, query=query,
@@ -275,7 +284,7 @@ def on_select_date(update: Update, context: CallbackContext):
             prev_date, next_date = db.ExchangeRate.get_prev_next_dates(for_date)
             for_date = next_date if next_date else prev_date
 
-        text = db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CODES, for_date)
+        text = db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CHAR_CODES, for_date)
         if msg_not_found_for_date:
             text = msg_not_found_for_date + '\n\n' + text
 
@@ -290,14 +299,14 @@ def on_select_date(update: Update, context: CallbackContext):
 
 @log_func(log)
 def on_command_last_by_week(update: Update, context: CallbackContext):
-    currency_code = DEFAULT_CURRENCY_CODE
+    currency_char_code = DEFAULT_CURRENCY_CHAR_CODE
     number = 7
 
     # TODO: Default currency code? Или мб брать первую валюту из настроек?
     reply_message(
         text='',
         photo=get_plot_for_currency(
-            currency_code=currency_code,
+            currency_char_code=currency_char_code,
             number=number,
         ),
         update=update, context=context,
@@ -308,14 +317,14 @@ def on_command_last_by_week(update: Update, context: CallbackContext):
 
 @log_func(log)
 def on_command_last_by_month(update: Update, context: CallbackContext):
-    currency_code = DEFAULT_CURRENCY_CODE
+    currency_char_code = DEFAULT_CURRENCY_CHAR_CODE
     number = 30
 
     # TODO: Default currency code? Или мб брать первую валюту из настроек?
     reply_message(
         text='',
         photo=get_plot_for_currency(
-            currency_code=currency_code,
+            currency_char_code=currency_char_code,
             number=number,
         ),
         update=update, context=context,
@@ -330,14 +339,14 @@ def on_command_last_by_month(update: Update, context: CallbackContext):
     progress_value=PROGRESS_VALUE,
 )
 def on_command_get_all(update: Update, context: CallbackContext):
-    currency_code = DEFAULT_CURRENCY_CODE
+    currency_char_code = DEFAULT_CURRENCY_CHAR_CODE
     number = -1
 
     # TODO: Default currency code? Или мб брать первую валюту из настроек?
     reply_message(
         text='',
         photo=get_plot_for_currency(
-            currency_code=currency_code,
+            currency_char_code=currency_char_code,
             number=number,
         ),
         update=update, context=context,
@@ -345,7 +354,7 @@ def on_command_get_all(update: Update, context: CallbackContext):
         reply_markup=InlineKeyboardMarkup.from_button(
             InlineKeyboardButton(
                 text='Посмотреть за определенный год',
-                callback_data=fill_string_pattern(PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR, currency_code, -1)
+                callback_data=fill_string_pattern(PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR, currency_char_code, -1)
             )
         ),
     )
@@ -357,8 +366,8 @@ def on_get_all_by_year(update: Update, context: CallbackContext):
     if query:
         query.answer()
 
-    currency_code: str = context.match.group(1)
-    if currency_code == CALLBACK_IGNORE:
+    currency_char_code: str = context.match.group(1)
+    if currency_char_code == CALLBACK_IGNORE:
         return
 
     year: int = int(context.match.group(2))
@@ -367,12 +376,12 @@ def on_get_all_by_year(update: Update, context: CallbackContext):
 
     reply_or_edit_plot_with_keyboard(
         update=update,
-        currency_code=currency_code,
+        currency_char_code=currency_char_code,
         year=year,
-        title=f"Стоимость {currency_code} в рублях за {year}",
+        title=f"Стоимость {currency_char_code} в рублях за {year}",
         # TODO: Возможность указывать другие валюты из настроек юзера
         reply_markup=get_inline_keyboard_for_year_pagination(
-            current_currency_code=currency_code,
+            current_currency_char_code=currency_char_code,
             current_year=year,
         ),
     )
