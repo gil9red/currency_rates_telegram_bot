@@ -6,11 +6,12 @@ __author__ = 'ipetrash'
 
 import datetime as DT
 import time
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Iterator
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 import db
 from root_common import get_date_str, caller_name, get_logger
@@ -18,6 +19,31 @@ from root_config import DIR_LOGS
 
 
 log = get_logger(__file__, DIR_LOGS / 'parser.txt')
+
+
+@dataclass
+class Currency:
+    num_code: int
+    char_code: str
+    name: str
+    nominal: int
+    value: Decimal
+    raw_value: Decimal
+
+    @classmethod
+    def parse_from(cls, el: Tag) -> 'Currency':
+        nominal = int(el.select_one('nominal').string)
+        value = Decimal(el.select_one('value').string.replace(',', '.'))
+        raw_value = value / nominal
+
+        return cls(
+            num_code=int(el.select_one('numcode').string),
+            char_code=el.select_one('charcode').string,
+            name=el.select_one('name').string,
+            nominal=nominal,
+            value=value,
+            raw_value=raw_value,
+        )
 
 
 def get_next_date(date: DT.date) -> DT.date:
@@ -40,7 +66,7 @@ def iter_dates(start_date: DT.date, end_date: DT.date = None) -> Iterator[DT.dat
         date_req1 = date_req2
 
 
-def get_currencies(date: DT.date) -> tuple[DT.date, dict[str, Decimal]]:
+def get_currencies(date: DT.date) -> tuple[DT.date, dict[str, Currency]]:
     date_fmt = '%d.%m.%Y'
     date_req = date.strftime(date_fmt)
 
@@ -53,9 +79,8 @@ def get_currencies(date: DT.date) -> tuple[DT.date, dict[str, Decimal]]:
     date = DT.datetime.strptime(root.valcurs['date'], date_fmt).date()
 
     for s in root.find_all('valute'):
-        currency = s.charcode.string
-        value = Decimal(s.value.string.replace(',', '.')) / Decimal(s.nominal.string)
-        currency_by_value[currency] = value
+        currency = Currency.parse_from(s)
+        currency_by_value[currency.char_code] = currency
 
     return date, currency_by_value
 
@@ -69,9 +94,18 @@ def parse(date_req: DT.date, prefix: str = '[parse]'):
         return
 
     old_count = db.ExchangeRate.count()
-    for currency_code, value in currency_by_value.items():
+    for currency_code, currency in currency_by_value.items():
+        if not db.Currency.get_by(number_code=currency.num_code):
+            db.Currency.add(
+                number_code=currency.num_code,
+                alpha3code=currency.char_code,
+                title=currency.name,
+            )
+            log.info(f'Добавлена валюта: {currency}')
+
         rate = db.ExchangeRate.get_by(date=date, currency_code=currency_code)
         if not rate:
+            value = currency.raw_value
             db.ExchangeRate.add(
                 date=date,
                 currency_code=currency_code,

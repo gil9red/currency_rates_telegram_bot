@@ -8,7 +8,7 @@ import datetime as DT
 import enum
 import time
 from decimal import Decimal
-from typing import Type, Iterable, Optional
+from typing import Type, Iterable, Optional, Union
 
 # pip install peewee
 from peewee import (
@@ -298,6 +298,45 @@ class ExchangeRate(BaseModel):
         return '\n'.join(lines)
 
 
+class Currency(BaseModel):
+    alpha3code = CharField(unique=True)
+    title = CharField()
+
+    @classmethod
+    def get_by(
+            cls,
+            number_code: Union[int, str] = None,
+            alpha3code: str = None
+    ) -> Optional['Currency']:
+        if number_code:
+            return cls.get_or_none(id=number_code)
+        elif alpha3code:
+            return cls.get_or_none(alpha3code=alpha3code)
+        else:
+            raise Exception('Параметры number_code или alpha3code должны быть заполнены!')
+
+    @classmethod
+    def add(
+            cls,
+            number_code: Union[int, str],
+            alpha3code: str,
+            title: str,
+    ) -> 'Currency':
+        obj = cls.get_by(number_code=number_code, alpha3code=alpha3code)
+        if not obj:
+            obj = cls.create(
+                id=number_code,
+                alpha3code=alpha3code,
+                title=title,
+            )
+
+        return obj
+
+    @classmethod
+    def get_all_alpha3code(cls) -> list[str]:
+        return [obj.alpha3code for obj in cls.select(cls.alpha3code)]
+
+
 class Subscription(BaseModel):
     user_id = IntegerField(unique=True)
     is_active = BooleanField(default=True)
@@ -389,3 +428,7 @@ if __name__ == '__main__':
     for year in range(START_DATE.year + 1, ExchangeRate.get_last_date().year):
         assert ExchangeRate.get_prev_next_years(year=year) == (year - 1, year + 1), \
             f'Неправильно определилось значение для {year}'
+
+    assert Currency.get_by(number_code=36) == Currency.get_by(number_code="36")
+    assert Currency.get_by(number_code=36) == Currency.get_by(number_code="036")
+    assert Currency.get_by(number_code=36) == Currency.get_by(alpha3code="AUD")
