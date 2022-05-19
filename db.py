@@ -17,7 +17,7 @@ from peewee import (
 )
 from playhouse.sqliteq import SqliteQueueDatabase
 
-from root_config import DB_FILE_NAME
+from root_config import DB_FILE_NAME, DEFAULT_CURRENCY_CHAR_CODES
 from bot.common import SubscriptionResultEnum
 from root_common import get_start_date, get_end_date, get_date_str
 from parser.config import START_DATE
@@ -391,6 +391,46 @@ class Subscription(BaseModel):
         self.save()
 
 
+class Settings(BaseModel):
+    selected_currencies = TextField(default='')
+
+    @classmethod
+    def get_by(cls, user_id: int) -> Optional['Settings']:
+        return cls.get_or_none(id=user_id)
+
+    @classmethod
+    def get_selected_currencies(cls, user_id: int) -> list[str]:
+        settings = cls.get_by(user_id)
+        if not settings:
+            return DEFAULT_CURRENCY_CHAR_CODES
+
+        selected_currencies = settings.selected_currencies.split(',')
+
+        # Сначала добавляем валюты из списка
+        currency_char_codes = [
+            char_code for char_code in DEFAULT_CURRENCY_CHAR_CODES if
+            char_code in selected_currencies
+        ]
+        for char_code in selected_currencies:
+            if char_code not in currency_char_codes:
+                currency_char_codes.append(char_code)
+
+        return currency_char_codes
+
+    @classmethod
+    def set_selected_currencies(cls, user_id: int, items: list[str]):
+        text = ','.join(items)
+        if text == cls.get_selected_currencies(user_id):
+            return
+
+        settings = cls.get_by(user_id)
+        if not settings:
+            settings = cls.create(id=user_id)
+
+        settings.selected_currencies = text
+        settings.save()
+
+
 db.connect()
 db.create_tables(BaseModel.get_inherited_models())
 
@@ -433,3 +473,10 @@ if __name__ == '__main__':
     assert Currency.get_by(number_code=36) == Currency.get_by(number_code="36")
     assert Currency.get_by(number_code=36) == Currency.get_by(number_code="036")
     assert Currency.get_by(number_code=36) == Currency.get_by(char_code="AUD")
+
+    import random
+    all_currency_char_codes = Currency.get_all_char_codes()
+    random.shuffle(all_currency_char_codes)
+    user_id = -1
+    Settings.set_selected_currencies(user_id=user_id, items=all_currency_char_codes)
+    assert sorted(all_currency_char_codes) == sorted(Settings.get_selected_currencies(user_id=user_id))

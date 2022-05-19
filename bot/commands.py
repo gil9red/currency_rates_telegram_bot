@@ -19,13 +19,15 @@ from bot.common import (
     log, log_func, process_error, reply_message, reply_text_or_edit_with_keyboard,
     SeverityEnum, SubscriptionResultEnum, is_equal_inline_keyboards
 )
-from root_common import get_date_str
+from root_common import get_date_str, split_list
 from bot.regexp_patterns import (
     PATTERN_INLINE_GET_BY_DATE, COMMAND_SUBSCRIBE, COMMAND_UNSUBSCRIBE,
-    COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL,
-    COMMAND_ADMIN_STATS, REPLY_ADMIN_STATS,
+    PATTERN_REPLY_COMMAND_LAST, REPLY_COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL,
+    COMMAND_SETTINGS, PATTERN_REPLY_SETTINGS,
+    COMMAND_ADMIN_STATS, PATTERN_REPLY_ADMIN_STATS,
     PATTERN_REPLY_SELECT_DATE, PATTERN_INLINE_SELECT_DATE,
     PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR,
+    PATTERN_INLINE_SETTINGS_SELECT_CURRENCY_CHAR_CODE,
     CALLBACK_IGNORE,
     fill_string_pattern,
 )
@@ -46,12 +48,6 @@ FORMAT_NEXT = '{} ❯'
 
 FORMAT_CHECKBOX = '✅ {}'
 FORMAT_CHECKBOX_EMPTY = '⬜ {}'
-
-
-all_currency_char_codes = list(DEFAULT_CURRENCY_CHAR_CODES)
-for char_code in db.Currency.get_all_char_codes():
-    if char_code not in all_currency_char_codes:
-        all_currency_char_codes.append(char_code)
 
 
 def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboardMarkup:
@@ -86,29 +82,39 @@ def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboard
     return InlineKeyboardMarkup.from_row(buttons)
 
 
-def get_inline_keyboard_for_year_pagination(current_currency_char_code: str, current_year: int) -> InlineKeyboardMarkup:
+def get_inline_keyboard_for_year_pagination(
+        update: Update,
+        current_currency_char_code: str,
+        current_year: int
+) -> InlineKeyboardMarkup:
     pattern = PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR
 
     # Список из 2 списков
-    buttons: list[list[InlineKeyboardButton]] = [[], []]
+    buttons: list[list[InlineKeyboardButton]] = []
 
-    for currency_char_code in DEFAULT_CURRENCY_CHAR_CODES:
-        is_current = current_currency_char_code == currency_char_code
+    user_id = update.effective_user.id
+    selected_currencies = db.Settings.get_selected_currencies(user_id)
 
-        buttons[0].append(
-            InlineKeyboardButton(
-                text=FORMAT_CURRENT.format(currency_char_code) if is_current else currency_char_code,
-                callback_data=fill_string_pattern(
-                    pattern,
-                    CALLBACK_IGNORE if is_current else currency_char_code,
-                    CALLBACK_IGNORE if is_current else current_year
+    for row in split_list(selected_currencies, columns=4):
+        buttons.append([])
+        for currency_char_code in row:
+            is_current = current_currency_char_code == currency_char_code
+
+            buttons[-1].append(
+                InlineKeyboardButton(
+                    text=FORMAT_CURRENT.format(currency_char_code) if is_current else currency_char_code,
+                    callback_data=fill_string_pattern(
+                        pattern,
+                        CALLBACK_IGNORE if is_current else currency_char_code,
+                        CALLBACK_IGNORE if is_current else current_year
+                    )
                 )
             )
-        )
 
+    buttons.append([])
     prev_year, next_year = db.ExchangeRate.get_prev_next_years(year=current_year, currency_char_code=current_currency_char_code)
     if prev_year:
-        buttons[1].append(
+        buttons[-1].append(
             InlineKeyboardButton(
                 text=FORMAT_PREV.format(prev_year),
                 callback_data=fill_string_pattern(pattern, current_currency_char_code, prev_year),
@@ -116,7 +122,7 @@ def get_inline_keyboard_for_year_pagination(current_currency_char_code: str, cur
         )
 
     # Текущий выбор
-    buttons[1].append(
+    buttons[-1].append(
         InlineKeyboardButton(
             text=FORMAT_CURRENT.format(current_year),
             callback_data=fill_string_pattern(pattern, CALLBACK_IGNORE, CALLBACK_IGNORE),
@@ -124,7 +130,7 @@ def get_inline_keyboard_for_year_pagination(current_currency_char_code: str, cur
     )
 
     if next_year:
-        buttons[1].append(
+        buttons[-1].append(
             InlineKeyboardButton(
                 text=FORMAT_NEXT.format(next_year),
                 callback_data=fill_string_pattern(pattern, current_currency_char_code, next_year)
@@ -138,7 +144,7 @@ def get_reply_keyboard(update: Update) -> ReplyKeyboardMarkup:
     is_active = db.Subscription.has_is_active(update.effective_user.id)
 
     commands = [
-        [COMMAND_LAST, fill_string_pattern(PATTERN_REPLY_SELECT_DATE)],
+        [REPLY_COMMAND_LAST, fill_string_pattern(PATTERN_REPLY_SELECT_DATE)],
         [COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL],
         [COMMAND_UNSUBSCRIBE if is_active else COMMAND_SUBSCRIBE]
     ]
@@ -205,6 +211,72 @@ def on_start(update: Update, context: CallbackContext):
     )
 
 
+def reply_settings_select_currency_char_code(update: Update, context: CallbackContext):
+    message = update.effective_message
+
+    pattern = PATTERN_INLINE_SETTINGS_SELECT_CURRENCY_CHAR_CODE
+
+    all_currency_char_codes = list(DEFAULT_CURRENCY_CHAR_CODES)
+    for char_code in db.Currency.get_all_char_codes():
+        if char_code not in all_currency_char_codes:
+            all_currency_char_codes.append(char_code)
+
+    user_id = update.effective_user.id
+    selected_currencies = db.Settings.get_selected_currencies(user_id)
+
+    currency_by_enabled: dict[str, bool] = {
+        char_code: char_code in selected_currencies
+        for char_code in all_currency_char_codes
+    }
+
+    # Если определено, значит был запрос через inline-кнопки
+    query = update.callback_query
+    if query:
+        currency_char_code: str = context.match.group(1)
+        currency_by_enabled[currency_char_code] = not currency_by_enabled[currency_char_code]
+        log.debug(f'    {currency_char_code} = {currency_by_enabled[currency_char_code]}')
+
+        # Проверяем, что после изменения настроек хотя бы одна валюта будет выбрана
+        if any(currency_by_enabled.values()):
+            query.answer()
+        else:
+            query.answer(
+                show_alert=True,
+                text="Хотя бы одна валюта должна быть выбрана!",
+            )
+            return
+
+        selected_currencies = [currency for currency, is_selected in currency_by_enabled.items() if is_selected]
+        db.Settings.set_selected_currencies(user_id, selected_currencies)
+
+    # Генерация матрицы кнопок
+    items = [
+        InlineKeyboardButton(
+            (FORMAT_CHECKBOX if is_selected else FORMAT_CHECKBOX_EMPTY).format(currency),
+            callback_data=fill_string_pattern(pattern, currency)
+        )
+        for currency, is_selected in currency_by_enabled.items()
+    ]
+    buttons = split_list(items, columns=4)
+
+    reply_text_or_edit_with_keyboard(
+        message=message, query=query,
+        text='Выбор интересующих валют',
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+
+
+@log_func(log)
+def on_settings(update: Update, context: CallbackContext):
+    # NOTE: Пока настройки только такое поддерживают
+    reply_settings_select_currency_char_code(update, context)
+
+
+@log_func(log)
+def on_settings_select_currency_char_code(update: Update, context: CallbackContext):
+    reply_settings_select_currency_char_code(update, context)
+
+
 @log_func(log)
 def on_get_admin_stats(update: Update, context: CallbackContext):
     currency_count = db.ExchangeRate.select().count()
@@ -244,8 +316,9 @@ def on_command_last(update: Update, context: CallbackContext):
     except:
         for_date: DT.date = db.ExchangeRate.get_last_date()
 
-    # TODO: Default currency code? Или мб брать первую валюту из настроек?
-    text = db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CHAR_CODES, for_date)
+    user_id = update.effective_user.id
+    selected_currencies = db.Settings.get_selected_currencies(user_id)
+    text = db.ExchangeRate.get_full_description(selected_currencies, for_date)
 
     reply_text_or_edit_with_keyboard(
         message=message, query=query,
@@ -284,7 +357,9 @@ def on_select_date(update: Update, context: CallbackContext):
             prev_date, next_date = db.ExchangeRate.get_prev_next_dates(for_date)
             for_date = next_date if next_date else prev_date
 
-        text = db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CHAR_CODES, for_date)
+        user_id = update.effective_user.id
+        selected_currencies = db.Settings.get_selected_currencies(user_id)
+        text = db.ExchangeRate.get_full_description(selected_currencies, for_date)
         if msg_not_found_for_date:
             text = msg_not_found_for_date + '\n\n' + text
 
@@ -299,10 +374,11 @@ def on_select_date(update: Update, context: CallbackContext):
 
 @log_func(log)
 def on_command_last_by_week(update: Update, context: CallbackContext):
-    currency_char_code = DEFAULT_CURRENCY_CHAR_CODE
+    user_id = update.effective_user.id
+    selected_currencies = db.Settings.get_selected_currencies(user_id)
+    currency_char_code = selected_currencies[0]
     number = 7
 
-    # TODO: Default currency code? Или мб брать первую валюту из настроек?
     reply_message(
         text='',
         photo=get_plot_for_currency(
@@ -317,10 +393,11 @@ def on_command_last_by_week(update: Update, context: CallbackContext):
 
 @log_func(log)
 def on_command_last_by_month(update: Update, context: CallbackContext):
-    currency_char_code = DEFAULT_CURRENCY_CHAR_CODE
+    user_id = update.effective_user.id
+    selected_currencies = db.Settings.get_selected_currencies(user_id)
+    currency_char_code = selected_currencies[0]
     number = 30
 
-    # TODO: Default currency code? Или мб брать первую валюту из настроек?
     reply_message(
         text='',
         photo=get_plot_for_currency(
@@ -339,10 +416,11 @@ def on_command_last_by_month(update: Update, context: CallbackContext):
     progress_value=PROGRESS_VALUE,
 )
 def on_command_get_all(update: Update, context: CallbackContext):
-    currency_char_code = DEFAULT_CURRENCY_CHAR_CODE
+    user_id = update.effective_user.id
+    selected_currencies = db.Settings.get_selected_currencies(user_id)
+    currency_char_code = selected_currencies[0]
     number = -1
 
-    # TODO: Default currency code? Или мб брать первую валюту из настроек?
     reply_message(
         text='',
         photo=get_plot_for_currency(
@@ -354,7 +432,9 @@ def on_command_get_all(update: Update, context: CallbackContext):
         reply_markup=InlineKeyboardMarkup.from_button(
             InlineKeyboardButton(
                 text='Посмотреть за определенный год',
-                callback_data=fill_string_pattern(PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR, currency_char_code, -1)
+                callback_data=fill_string_pattern(
+                    PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR, currency_char_code, number
+                )
             )
         ),
     )
@@ -379,8 +459,8 @@ def on_get_all_by_year(update: Update, context: CallbackContext):
         currency_char_code=currency_char_code,
         year=year,
         title=f"Стоимость {currency_char_code} в рублях за {year}",
-        # TODO: Возможность указывать другие валюты из настроек юзера
         reply_markup=get_inline_keyboard_for_year_pagination(
+            update=update,
             current_currency_char_code=currency_char_code,
             current_year=year,
         ),
@@ -447,10 +527,19 @@ def on_error(update: Update, context: CallbackContext):
 def setup(dp: Dispatcher):
     dp.add_handler(CommandHandler('start', on_start))
 
-    dp.add_handler(CommandHandler(COMMAND_ADMIN_STATS, on_get_admin_stats, FILTER_BY_ADMIN))
-    dp.add_handler(MessageHandler(Filters.text(REPLY_ADMIN_STATS) & FILTER_BY_ADMIN, on_get_admin_stats))
+    dp.add_handler(CommandHandler(COMMAND_SETTINGS, on_settings))
+    dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_SETTINGS), on_settings))
+    dp.add_handler(
+        CallbackQueryHandler(
+            on_settings_select_currency_char_code,
+            pattern=PATTERN_INLINE_SETTINGS_SELECT_CURRENCY_CHAR_CODE
+        )
+    )
 
-    dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST), on_command_last))
+    dp.add_handler(CommandHandler(COMMAND_ADMIN_STATS, on_get_admin_stats, FILTER_BY_ADMIN))
+    dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_ADMIN_STATS) & FILTER_BY_ADMIN, on_get_admin_stats))
+
+    dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_COMMAND_LAST), on_command_last))
     dp.add_handler(CallbackQueryHandler(on_command_last, pattern=PATTERN_INLINE_GET_BY_DATE))
 
     dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_SELECT_DATE), on_select_date))

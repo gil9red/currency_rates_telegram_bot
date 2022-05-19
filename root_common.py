@@ -33,6 +33,18 @@ def caller_name() -> str:
     return inspect.currentframe().f_back.f_code.co_name
 
 
+# SOURCE: https://github.com/gil9red/telegram__random_bashim_bot/blob/4042e9664eea997271eaca2c8ad523b0afdf63fb/common.py#L52
+def split_list(items: list, columns: int = 5) -> list[list]:
+    result = []
+
+    for i in range(0, len(items), columns):
+        result.append(
+            [key for key in items[i: i + columns]]
+        )
+
+    return result
+
+
 def get_logger(
         name: str,
         file: Union[str, Path] = 'log.txt',

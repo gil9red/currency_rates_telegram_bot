@@ -10,7 +10,7 @@ from telegram import Bot, ParseMode
 
 import db
 from root_common import caller_name, get_logger
-from root_config import DIR_LOGS, TOKEN, DEFAULT_CURRENCY_CHAR_CODES  # TODO: Использовать настройки юзера
+from root_config import DIR_LOGS, TOKEN
 
 
 log = get_logger(__file__, DIR_LOGS / 'notifications.txt')
@@ -32,8 +32,10 @@ def sending_notifications():
 
             log.info(f'{prefix} Выполняется рассылка к {len(subscriptions)} пользователям')
 
-            text = f'<b>Рассылка</b>\n{db.ExchangeRate.get_full_description(DEFAULT_CURRENCY_CHAR_CODES)}'
             for subscription in subscriptions:
+                selected_currencies = db.Settings.get_selected_currencies(subscription.user_id)
+                text = f'<b>Рассылка</b>\n{db.ExchangeRate.get_full_description(selected_currencies)}'
+
                 bot.send_message(
                     chat_id=subscription.user_id,  # Для приватных чатов chat_id равен user_id
                     text=text,
