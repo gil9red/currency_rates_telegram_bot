@@ -5,6 +5,7 @@ __author__ = 'ipetrash'
 
 
 import datetime as DT
+import re
 
 # pip install python-telegram-bot
 from telegram import (
@@ -14,7 +15,7 @@ from telegram.error import BadRequest
 from telegram.ext import Dispatcher, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 
 import db
-from root_config import USER_NAME_ADMINS, DEFAULT_CURRENCY_CHAR_CODES, DEFAULT_CURRENCY_CHAR_CODE
+from root_config import USER_NAME_ADMINS, DEFAULT_CURRENCY_CHAR_CODES
 from bot.common import (
     log, log_func, process_error, reply_message, reply_text_or_edit_with_keyboard,
     SeverityEnum, SubscriptionResultEnum, is_equal_inline_keyboards
@@ -23,6 +24,7 @@ from root_common import get_date_str, split_list
 from bot.regexp_patterns import (
     PATTERN_INLINE_GET_BY_DATE, COMMAND_SUBSCRIBE, COMMAND_UNSUBSCRIBE,
     PATTERN_REPLY_COMMAND_LAST, REPLY_COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL,
+    PATTERN_INLINE_GET_CHART_CURRENCY_BY_NUMBER,
     COMMAND_SETTINGS, PATTERN_REPLY_SETTINGS,
     COMMAND_ADMIN_STATS, PATTERN_REPLY_ADMIN_STATS,
     PATTERN_REPLY_SELECT_DATE, PATTERN_INLINE_SELECT_DATE,
@@ -39,8 +41,8 @@ from utils.graph import get_plot_for_currency
 
 FILTER_BY_ADMIN = Filters.user(username=USER_NAME_ADMINS)
 
-TEXT_SHOW_TEMP_MESSAGE = SeverityEnum.INFO.get_text('Пожалуйста, подождите {value}')
-PROGRESS_VALUE = ProgressValue.RECTS_SMALL
+TEXT_SHOW_TEMP_MESSAGE: str = SeverityEnum.INFO.get_text('Пожалуйста, подождите {value}')
+PROGRESS_VALUE: ProgressValue = ProgressValue.RECTS_SMALL
 
 FORMAT_PREV = '❮ {}'
 FORMAT_CURRENT = '· {} ·'
@@ -48,6 +50,24 @@ FORMAT_NEXT = '{} ❯'
 
 FORMAT_CHECKBOX = '✅ {}'
 FORMAT_CHECKBOX_EMPTY = '⬜ {}'
+
+COLUMNS_FOR_CURRENCY: int = 4
+
+
+def get_title_currency_by(
+        currency_char_code: str,
+        number: int = -1,
+        year: int = None,
+) -> str:
+    prefix = f"Стоимость {currency_char_code} в рублях за"
+
+    if year:
+        return f"{prefix} {year} год"
+
+    if number == -1:
+        return f"{prefix} все записи"
+    else:
+        return f"{prefix} последние {number} записей"
 
 
 def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboardMarkup:
@@ -82,20 +102,21 @@ def get_inline_keyboard_for_date_pagination(for_date: DT.date) -> InlineKeyboard
     return InlineKeyboardMarkup.from_row(buttons)
 
 
-def get_inline_keyboard_for_year_pagination(
+def get_buttons_for_selected_currencies(
         update: Update,
+        pattern: re.Pattern,
         current_currency_char_code: str,
-        current_year: int
-) -> InlineKeyboardMarkup:
-    pattern = PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR
+        current_value: int,
+        selected_currencies: list[str] = None,
 
-    # Список из 2 списков
+) -> list[list[InlineKeyboardButton]]:
+    if not selected_currencies:
+        user_id = update.effective_user.id
+        selected_currencies = db.Settings.get_selected_currencies(user_id)
+
     buttons: list[list[InlineKeyboardButton]] = []
 
-    user_id = update.effective_user.id
-    selected_currencies = db.Settings.get_selected_currencies(user_id)
-
-    for row in split_list(selected_currencies, columns=4):
+    for row in split_list(selected_currencies, columns=COLUMNS_FOR_CURRENCY):
         buttons.append([])
         for currency_char_code in row:
             is_current = current_currency_char_code == currency_char_code
@@ -106,10 +127,53 @@ def get_inline_keyboard_for_year_pagination(
                     callback_data=fill_string_pattern(
                         pattern,
                         CALLBACK_IGNORE if is_current else currency_char_code,
-                        CALLBACK_IGNORE if is_current else current_year
+                        CALLBACK_IGNORE if is_current else current_value
                     )
                 )
             )
+
+    return buttons
+
+
+def get_inline_keyboard_for_number_pagination(
+        update: Update,
+        current_currency_char_code: str,
+        current_number: int,
+        selected_currencies: list[str] = None,
+) -> InlineKeyboardMarkup:
+    buttons = get_buttons_for_selected_currencies(
+        update=update,
+        pattern=PATTERN_INLINE_GET_CHART_CURRENCY_BY_NUMBER,
+        current_currency_char_code=current_currency_char_code,
+        current_value=current_number,
+        selected_currencies=selected_currencies,
+    )
+
+    buttons.append([
+        InlineKeyboardButton(
+            text='Посмотреть за определенный год',
+            callback_data=fill_string_pattern(
+                PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR, current_currency_char_code, -1
+            )
+        )
+    ])
+
+    return InlineKeyboardMarkup(buttons)
+
+
+def get_inline_keyboard_for_year_pagination(
+        update: Update,
+        current_currency_char_code: str,
+        current_year: int
+) -> InlineKeyboardMarkup:
+    pattern = PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR
+
+    buttons = get_buttons_for_selected_currencies(
+        update=update,
+        pattern=pattern,
+        current_currency_char_code=current_currency_char_code,
+        current_value=current_year,
+    )
 
     buttons.append([])
     prev_year, next_year = db.ExchangeRate.get_prev_next_years(year=current_year, currency_char_code=current_currency_char_code)
@@ -257,7 +321,7 @@ def reply_settings_select_currency_char_code(update: Update, context: CallbackCo
         )
         for currency, is_selected in currency_by_enabled.items()
     ]
-    buttons = split_list(items, columns=4)
+    buttons = split_list(items, columns=COLUMNS_FOR_CURRENCY)
 
     reply_text_or_edit_with_keyboard(
         message=message, query=query,
@@ -379,15 +443,17 @@ def on_command_last_by_week(update: Update, context: CallbackContext):
     currency_char_code = selected_currencies[0]
     number = 7
 
-    reply_message(
-        text='',
-        photo=get_plot_for_currency(
-            currency_char_code=currency_char_code,
-            number=number,
+    reply_or_edit_plot_with_keyboard(
+        update=update,
+        currency_char_code=currency_char_code,
+        number=number,
+        title=get_title_currency_by(currency_char_code=currency_char_code, number=number),
+        reply_markup=get_inline_keyboard_for_number_pagination(
+            update=update,
+            current_currency_char_code=currency_char_code,
+            current_number=number,
+            selected_currencies=selected_currencies,
         ),
-        update=update, context=context,
-        parse_mode=ParseMode.HTML,
-        reply_markup=get_reply_keyboard(update)
     )
 
 
@@ -398,15 +464,17 @@ def on_command_last_by_month(update: Update, context: CallbackContext):
     currency_char_code = selected_currencies[0]
     number = 30
 
-    reply_message(
-        text='',
-        photo=get_plot_for_currency(
-            currency_char_code=currency_char_code,
-            number=number,
+    reply_or_edit_plot_with_keyboard(
+        update=update,
+        currency_char_code=currency_char_code,
+        number=number,
+        title=get_title_currency_by(currency_char_code=currency_char_code, number=number),
+        reply_markup=get_inline_keyboard_for_number_pagination(
+            update=update,
+            current_currency_char_code=currency_char_code,
+            current_number=number,
+            selected_currencies=selected_currencies,
         ),
-        update=update, context=context,
-        parse_mode=ParseMode.HTML,
-        reply_markup=get_reply_keyboard(update)
     )
 
 
@@ -421,21 +489,16 @@ def on_command_get_all(update: Update, context: CallbackContext):
     currency_char_code = selected_currencies[0]
     number = -1
 
-    reply_message(
-        text='',
-        photo=get_plot_for_currency(
-            currency_char_code=currency_char_code,
-            number=number,
-        ),
-        update=update, context=context,
-        parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup.from_button(
-            InlineKeyboardButton(
-                text='Посмотреть за определенный год',
-                callback_data=fill_string_pattern(
-                    PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR, currency_char_code, number
-                )
-            )
+    reply_or_edit_plot_with_keyboard(
+        update=update,
+        currency_char_code=currency_char_code,
+        number=number,
+        title=get_title_currency_by(currency_char_code=currency_char_code, number=number),
+        reply_markup=get_inline_keyboard_for_number_pagination(
+            update=update,
+            current_currency_char_code=currency_char_code,
+            current_number=number,
+            selected_currencies=selected_currencies,
         ),
     )
 
@@ -458,11 +521,40 @@ def on_get_all_by_year(update: Update, context: CallbackContext):
         update=update,
         currency_char_code=currency_char_code,
         year=year,
-        title=f"Стоимость {currency_char_code} в рублях за {year}",
+        title=get_title_currency_by(currency_char_code=currency_char_code, year=year),
         reply_markup=get_inline_keyboard_for_year_pagination(
             update=update,
             current_currency_char_code=currency_char_code,
             current_year=year,
+        ),
+    )
+
+
+@log_func(log)
+def on_get_chart_by_number(update: Update, context: CallbackContext):
+    query = update.callback_query
+    if query:
+        query.answer()
+
+    currency_char_code: str = context.match.group(1)
+    if currency_char_code == CALLBACK_IGNORE:
+        return
+
+    number: int = int(context.match.group(2))
+
+    user_id = update.effective_user.id
+    selected_currencies = db.Settings.get_selected_currencies(user_id)
+
+    reply_or_edit_plot_with_keyboard(
+        update=update,
+        currency_char_code=currency_char_code,
+        number=number,
+        title=get_title_currency_by(currency_char_code=currency_char_code, number=number),
+        reply_markup=get_inline_keyboard_for_number_pagination(
+            update=update,
+            current_currency_char_code=currency_char_code,
+            current_number=number,
+            selected_currencies=selected_currencies,
         ),
     )
 
@@ -550,6 +642,7 @@ def setup(dp: Dispatcher):
     dp.add_handler(MessageHandler(Filters.text(COMMAND_GET_ALL), on_command_get_all))
 
     dp.add_handler(CallbackQueryHandler(on_get_all_by_year, pattern=PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR))
+    dp.add_handler(CallbackQueryHandler(on_get_chart_by_number, pattern=PATTERN_INLINE_GET_CHART_CURRENCY_BY_NUMBER))
 
     dp.add_handler(MessageHandler(Filters.text(COMMAND_SUBSCRIBE), on_command_subscribe))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_UNSUBSCRIBE), on_command_unsubscribe))

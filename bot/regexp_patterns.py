@@ -32,6 +32,7 @@ CALLBACK_IGNORE = 'IGNORE'
 COMMAND_LAST_BY_WEEK = 'За неделю'
 COMMAND_LAST_BY_MONTH = 'За месяц'
 COMMAND_GET_ALL = 'За всё время'
+PATTERN_INLINE_GET_CHART_CURRENCY_BY_NUMBER = re.compile(r'^get_chart currency=(.+) number=(.+)$')
 
 COMMAND_SUBSCRIBE = 'Подписаться'
 COMMAND_UNSUBSCRIBE = 'Отписаться'
