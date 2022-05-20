@@ -30,6 +30,7 @@ from bot.regexp_patterns import (
     PATTERN_REPLY_SELECT_DATE, PATTERN_INLINE_SELECT_DATE,
     PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR,
     PATTERN_INLINE_SETTINGS_SELECT_CURRENCY_CHAR_CODE,
+    PATTERN_REPLY_SHOW_ALL_CURRENCIES, PATTERN_INLINE_SHOW_ALL_CURRENCIES,
     CALLBACK_IGNORE,
     fill_string_pattern,
 )
@@ -323,6 +324,13 @@ def reply_settings_select_currency_char_code(update: Update, context: CallbackCo
     ]
     buttons = split_list(items, columns=COLUMNS_FOR_CURRENCY)
 
+    buttons.append([
+        InlineKeyboardButton(
+            text=SeverityEnum.INFO.get_text('Посмотреть справку по валютам'),
+            callback_data=fill_string_pattern(PATTERN_INLINE_SHOW_ALL_CURRENCIES)
+        )
+    ])
+
     reply_text_or_edit_with_keyboard(
         message=message, query=query,
         text='Выбор интересующих валют',
@@ -560,6 +568,20 @@ def on_get_chart_by_number(update: Update, context: CallbackContext):
 
 
 @log_func(log)
+def on_show_all_currencies(update: Update, context: CallbackContext):
+    query = update.callback_query
+    if query:
+        query.answer()
+
+    text = f"Список всех валют бота:\n{db.Currency.get_full_description()}"
+
+    reply_message(
+        text=text,
+        update=update, context=context,
+    )
+
+
+@log_func(log)
 def on_command_subscribe(update: Update, context: CallbackContext):
     message = update.effective_message
     user_id = message.from_user.id
@@ -643,6 +665,9 @@ def setup(dp: Dispatcher):
 
     dp.add_handler(CallbackQueryHandler(on_get_all_by_year, pattern=PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR))
     dp.add_handler(CallbackQueryHandler(on_get_chart_by_number, pattern=PATTERN_INLINE_GET_CHART_CURRENCY_BY_NUMBER))
+
+    dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_SHOW_ALL_CURRENCIES), on_show_all_currencies))
+    dp.add_handler(CallbackQueryHandler(on_show_all_currencies, pattern=PATTERN_INLINE_SHOW_ALL_CURRENCIES))
 
     dp.add_handler(MessageHandler(Filters.text(COMMAND_SUBSCRIBE), on_command_subscribe))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_UNSUBSCRIBE), on_command_unsubscribe))

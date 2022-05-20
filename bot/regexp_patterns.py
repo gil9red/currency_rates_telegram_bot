@@ -20,12 +20,15 @@ PATTERN_REPLY_COMMAND_LAST = re.compile(r'^Последнее значение$'
 REPLY_COMMAND_LAST = fill_string_pattern(PATTERN_REPLY_COMMAND_LAST)
 PATTERN_INLINE_GET_BY_DATE = re.compile(r'^get_by_date=(.+)$')
 
-PATTERN_REPLY_SELECT_DATE = re.compile(r'^Выбрать дату', flags=re.IGNORECASE)
+PATTERN_REPLY_SELECT_DATE = re.compile(r'^Выбрать дату$', flags=re.IGNORECASE)
 PATTERN_INLINE_SELECT_DATE = re.compile(r'.+;\d+;\d+;\d+')  # NOTE: Формат telegramcalendar.py
 
 PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR = re.compile(r'^get_chart currency=(.+) year=(.+)$')
 
 PATTERN_INLINE_SETTINGS_SELECT_CURRENCY_CHAR_CODE = re.compile(r'^settings_select_currency_char_code=(.+)$')
+
+PATTERN_REPLY_SHOW_ALL_CURRENCIES = re.compile(r'^Все валюты$', flags=re.IGNORECASE)
+PATTERN_INLINE_SHOW_ALL_CURRENCIES = re.compile(r'^show_all_currencies$')
 
 CALLBACK_IGNORE = 'IGNORE'
 

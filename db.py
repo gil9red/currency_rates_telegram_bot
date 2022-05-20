@@ -336,6 +336,13 @@ class Currency(BaseModel):
     def get_all_char_codes(cls) -> list[str]:
         return [obj.char_code for obj in cls.select(cls.char_code)]
 
+    @classmethod
+    def get_full_description(cls) -> str:
+        return '\n'.join(
+            f'{obj.char_code} (код {str(obj.id).zfill(3)}) {obj.title}'
+            for obj in cls.select().order_by(cls.id.asc())
+        )
+
 
 class Subscription(BaseModel):
     user_id = IntegerField(unique=True)
@@ -480,3 +487,6 @@ if __name__ == '__main__':
     user_id = -1
     Settings.set_selected_currencies(user_id=user_id, items=all_currency_char_codes)
     assert sorted(all_currency_char_codes) == sorted(Settings.get_selected_currencies(user_id=user_id))
+
+    from root_config import MAX_MESSAGE_LENGTH
+    assert len(Currency.get_full_description()) <= MAX_MESSAGE_LENGTH
