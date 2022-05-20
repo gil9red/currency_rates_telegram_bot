@@ -33,13 +33,21 @@ PATTERN_INLINE_SHOW_ALL_CURRENCIES = re.compile(r'^show_all_currencies$')
 CALLBACK_IGNORE = 'IGNORE'
 
 PATTERN_REPLY_COMMAND_LAST_BY_WEEK = re.compile(r'^За неделю$', flags=re.IGNORECASE)
+REPLY_COMMAND_LAST_BY_WEEK = fill_string_pattern(PATTERN_REPLY_COMMAND_LAST_BY_WEEK)
+
 PATTERN_REPLY_COMMAND_LAST_BY_MONTH = re.compile(r'^За месяц$', flags=re.IGNORECASE)
+REPLY_COMMAND_LAST_BY_MONTH = fill_string_pattern(PATTERN_REPLY_COMMAND_LAST_BY_MONTH)
+
 PATTERN_REPLY_COMMAND_GET_ALL = re.compile(r'^За вс[её] время$', flags=re.IGNORECASE)
+REPLY_COMMAND_GET_ALL = 'За всё время'
+
 PATTERN_INLINE_GET_CHART_CURRENCY_BY_NUMBER = re.compile(r'^get_chart currency=(.+) number=(.+)$')
 
 PATTERN_REPLY_COMMAND_SUBSCRIBE = re.compile(r'^Подписаться$', flags=re.IGNORECASE)
-PATTERN_REPLY_COMMAND_UNSUBSCRIBE = re.compile(r'^Отписаться$', flags=re.IGNORECASE)
+REPLY_COMMAND_SUBSCRIBE = fill_string_pattern(PATTERN_REPLY_COMMAND_SUBSCRIBE)
 
+PATTERN_REPLY_COMMAND_UNSUBSCRIBE = re.compile(r'^Отписаться$', flags=re.IGNORECASE)
+REPLY_COMMAND_UNSUBSCRIBE = fill_string_pattern(PATTERN_REPLY_COMMAND_UNSUBSCRIBE)
 
 if __name__ == '__main__':
     assert fill_string_pattern(PATTERN_INLINE_GET_BY_DATE, DT.date(2022, 4, 1)) == 'get_by_date=2022-04-01'

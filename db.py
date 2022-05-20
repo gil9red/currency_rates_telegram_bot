@@ -338,9 +338,15 @@ class Currency(BaseModel):
 
     @classmethod
     def get_full_description(cls) -> str:
+        # Возврат валют в том же порядке, что в настройках
+        char_codes = list(DEFAULT_CURRENCY_CHAR_CODES)
+        for char_code in cls.get_all_char_codes():
+            if char_code not in char_codes:
+                char_codes.append(char_code)
+
         return '\n'.join(
             f'{obj.char_code} (код {str(obj.id).zfill(3)}) {obj.title}'
-            for obj in cls.select().order_by(cls.id.asc())
+            for obj in (cls.get_by(char_code=char_code) for char_code in char_codes)
         )
 
 
