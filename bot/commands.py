@@ -22,8 +22,8 @@ from bot.common import (
 )
 from root_common import get_date_str, split_list
 from bot.regexp_patterns import (
-    PATTERN_INLINE_GET_BY_DATE, COMMAND_SUBSCRIBE, COMMAND_UNSUBSCRIBE,
-    PATTERN_REPLY_COMMAND_LAST, REPLY_COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL,
+    PATTERN_INLINE_GET_BY_DATE, PATTERN_REPLY_COMMAND_SUBSCRIBE, PATTERN_REPLY_COMMAND_UNSUBSCRIBE,
+    PATTERN_REPLY_COMMAND_LAST, REPLY_COMMAND_LAST, PATTERN_REPLY_COMMAND_LAST_BY_WEEK, PATTERN_REPLY_COMMAND_LAST_BY_MONTH, PATTERN_REPLY_COMMAND_GET_ALL,
     PATTERN_INLINE_GET_CHART_CURRENCY_BY_NUMBER,
     COMMAND_SETTINGS, PATTERN_REPLY_SETTINGS,
     COMMAND_ADMIN_STATS, PATTERN_REPLY_ADMIN_STATS,
@@ -210,8 +210,8 @@ def get_reply_keyboard(update: Update) -> ReplyKeyboardMarkup:
 
     commands = [
         [REPLY_COMMAND_LAST, fill_string_pattern(PATTERN_REPLY_SELECT_DATE)],
-        [COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH, COMMAND_GET_ALL],
-        [COMMAND_UNSUBSCRIBE if is_active else COMMAND_SUBSCRIBE]
+        [PATTERN_REPLY_COMMAND_LAST_BY_WEEK, PATTERN_REPLY_COMMAND_LAST_BY_MONTH, PATTERN_REPLY_COMMAND_GET_ALL],
+        [PATTERN_REPLY_COMMAND_UNSUBSCRIBE if is_active else PATTERN_REPLY_COMMAND_SUBSCRIBE]
     ]
     return ReplyKeyboardMarkup(commands, resize_keyboard=True)
 
@@ -630,6 +630,7 @@ def on_request(update: Update, context: CallbackContext):
     reply_message(
         'Неизвестная команда 🤔',
         update=update, context=context,
+        severity=SeverityEnum.ERROR,
         reply_markup=get_reply_keyboard(update)
     )
 
@@ -659,9 +660,9 @@ def setup(dp: Dispatcher):
     dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_SELECT_DATE), on_select_date))
     dp.add_handler(CallbackQueryHandler(on_select_date, pattern=PATTERN_INLINE_SELECT_DATE))
 
-    dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_WEEK), on_command_last_by_week))
-    dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_MONTH), on_command_last_by_month))
-    dp.add_handler(MessageHandler(Filters.text(COMMAND_GET_ALL), on_command_get_all))
+    dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_COMMAND_LAST_BY_WEEK), on_command_last_by_week))
+    dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_COMMAND_LAST_BY_MONTH), on_command_last_by_month))
+    dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_COMMAND_GET_ALL), on_command_get_all))
 
     dp.add_handler(CallbackQueryHandler(on_get_all_by_year, pattern=PATTERN_INLINE_GET_CHART_CURRENCY_BY_YEAR))
     dp.add_handler(CallbackQueryHandler(on_get_chart_by_number, pattern=PATTERN_INLINE_GET_CHART_CURRENCY_BY_NUMBER))
@@ -669,8 +670,8 @@ def setup(dp: Dispatcher):
     dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_SHOW_ALL_CURRENCIES), on_show_all_currencies))
     dp.add_handler(CallbackQueryHandler(on_show_all_currencies, pattern=PATTERN_INLINE_SHOW_ALL_CURRENCIES))
 
-    dp.add_handler(MessageHandler(Filters.text(COMMAND_SUBSCRIBE), on_command_subscribe))
-    dp.add_handler(MessageHandler(Filters.text(COMMAND_UNSUBSCRIBE), on_command_unsubscribe))
+    dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_COMMAND_SUBSCRIBE), on_command_subscribe))
+    dp.add_handler(MessageHandler(Filters.regex(PATTERN_REPLY_COMMAND_UNSUBSCRIBE), on_command_unsubscribe))
 
     dp.add_handler(MessageHandler(Filters.text, on_request))
 
