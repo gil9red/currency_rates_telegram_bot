@@ -271,12 +271,11 @@ def reply_or_edit_plot_with_keyboard(
 @log_func(log)
 def on_start(update: Update, context: CallbackContext):
     reply_message(
-        f'Приветствую {update.effective_user.first_name} 🙂\n'
+        f'Приветствую, {update.effective_user.name}! 🙂\n'
         'Данный бот способен отслеживать валюты и отправлять вам уведомление при изменении 💲.\n'
         'С помощью меню вы можете подписаться/отписаться от рассылки, узнать '
         'актуальный курс за день, неделю или месяц.',
         update=update, context=context,
-        parse_mode=ParseMode.HTML,
         reply_markup=get_reply_keyboard(update),
     )
 
