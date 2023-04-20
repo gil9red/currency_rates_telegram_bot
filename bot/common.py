@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'ipetrash'
+__author__ = "ipetrash"
 
 
 import enum
@@ -41,17 +41,19 @@ def log_func(log: logging.Logger):
                 try:
                     message = update.effective_message.text
                 except:
-                    message = ''
+                    message = ""
 
                 try:
                     query_data = update.callback_query.data
                 except:
-                    query_data = ''
+                    query_data = ""
 
-                msg = f'[chat_id={chat_id}, user_id={user_id}, ' \
-                      f'first_name={first_name!r}, last_name={last_name!r}, ' \
-                      f'username={username!r}, language_code={language_code}, ' \
-                      f'message={message!r}, query_data={query_data!r}]'
+                msg = (
+                    f"[chat_id={chat_id}, user_id={user_id}, "
+                    f"first_name={first_name!r}, last_name={last_name!r}, "
+                    f"username={username!r}, language_code={language_code}, "
+                    f"message={message!r}, query_data={query_data!r}]"
+                )
                 msg = func.__name__ + msg
 
                 log.debug(msg)
@@ -59,13 +61,14 @@ def log_func(log: logging.Logger):
             return func(update, context)
 
         return wrapper
+
     return actual_decorator
 
 
 class SeverityEnum(enum.Enum):
-    NONE = '{text}'
-    INFO = 'ℹ️ {text}'
-    ERROR = '⚠ {text}'
+    NONE = "{text}"
+    INFO = "ℹ️ {text}"
+    ERROR = "⚠ {text}"
 
     def get_text(self, text: str) -> str:
         return self.value.format(text=text)
@@ -79,14 +82,14 @@ class SubscriptionResultEnum(enum.Enum):
 
 
 def reply_message(
-        text: str,
-        update: Update,
-        context: CallbackContext,
-        photo: Union[FileInput, PhotoSize] = None,
-        severity: SeverityEnum = SeverityEnum.NONE,
-        reply_markup: ReplyMarkup = None,
-        quote: bool = True,
-        **kwargs
+    text: str,
+    update: Update,
+    context: CallbackContext,
+    photo: Union[FileInput, PhotoSize] = None,
+    severity: SeverityEnum = SeverityEnum.NONE,
+    reply_markup: ReplyMarkup = None,
+    quote: bool = True,
+    **kwargs,
 ):
     message = update.effective_message
 
@@ -119,13 +122,13 @@ def is_equal_inline_keyboards(
         keyboard_2: InlineKeyboardMarkup
 ) -> bool:
     if isinstance(keyboard_1, InlineKeyboardMarkup):
-        keyboard_1_inline_keyboard = keyboard_1.to_dict()['inline_keyboard']
+        keyboard_1_inline_keyboard = keyboard_1.to_dict()["inline_keyboard"]
     elif isinstance(keyboard_1, str):
-        keyboard_1_inline_keyboard = json.loads(keyboard_1)['inline_keyboard']
+        keyboard_1_inline_keyboard = json.loads(keyboard_1)["inline_keyboard"]
     else:
-        raise Exception(f'Unsupported format (keyboard_1={type(keyboard_1)})!')
+        raise Exception(f"Unsupported format (keyboard_1={type(keyboard_1)})!")
 
-    keyboard_2_inline_keyboard = keyboard_2.to_dict()['inline_keyboard']
+    keyboard_2_inline_keyboard = keyboard_2.to_dict()["inline_keyboard"]
     return keyboard_1_inline_keyboard == keyboard_2_inline_keyboard
 
 
@@ -151,7 +154,7 @@ def reply_text_or_edit_with_keyboard(
                 **kwargs,
             )
         except BadRequest as e:
-            if 'Message is not modified' in str(e):
+            if "Message is not modified" in str(e):
                 return
 
             raise e
@@ -166,7 +169,7 @@ def reply_text_or_edit_with_keyboard(
 
 
 def process_error(log: logging.Logger, update: Update, context: CallbackContext):
-    log.error('Error: %s\nUpdate: %s', context.error, update, exc_info=context.error)
+    log.error("Error: %s\nUpdate: %s", context.error, update, exc_info=context.error)
     if update:
         # Не отправляем ошибку пользователю при проблемах с сетью (типа, таймаут)
         if isinstance(context.error, NetworkError):
@@ -175,4 +178,4 @@ def process_error(log: logging.Logger, update: Update, context: CallbackContext)
         reply_message(ERROR_TEXT, update, context, severity=SeverityEnum.ERROR)
 
 
-log = get_logger(__file__, DIR_LOGS / 'log.txt')
+log = get_logger(__file__, DIR_LOGS / "log.txt")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'ipetrash'
+__author__ = "ipetrash"
 
 
 import time
@@ -13,16 +13,16 @@ from root_common import caller_name, get_logger
 from root_config import DIR_LOGS, TOKEN
 
 
-log = get_logger(__file__, DIR_LOGS / 'notifications.txt')
+log = get_logger(__file__, DIR_LOGS / "notifications.txt")
 
 
 def sending_notifications():
-    prefix = f'[{caller_name()}]'
+    prefix = f"[{caller_name()}]"
 
     bot = Bot(TOKEN)
 
-    log.info(f'{prefix} Запуск')
-    log.debug(f'{prefix} Имя бота {bot.first_name!r} ({bot.name})')
+    log.info(f"{prefix} Запуск")
+    log.debug(f"{prefix} Имя бота {bot.first_name!r} ({bot.name})")
 
     while True:
         try:
@@ -30,11 +30,15 @@ def sending_notifications():
             if not subscriptions:
                 continue
 
-            log.info(f'{prefix} Выполняется рассылка к {len(subscriptions)} пользователям')
+            log.info(
+                f"{prefix} Выполняется рассылка к {len(subscriptions)} пользователям"
+            )
 
             for subscription in subscriptions:
-                selected_currencies = db.Settings.get_selected_currencies(subscription.user_id)
-                text = f'<b>Рассылка</b>\n{db.ExchangeRate.get_full_description(selected_currencies)}'
+                selected_currencies = db.Settings.get_selected_currencies(
+                    subscription.user_id
+                )
+                text = f"<b>Рассылка</b>\n{db.ExchangeRate.get_full_description(selected_currencies)}"
 
                 bot.send_message(
                     chat_id=subscription.user_id,  # Для приватных чатов chat_id равен user_id
@@ -48,10 +52,10 @@ def sending_notifications():
                 time.sleep(0.4)
 
         except Exception:
-            log.exception(f'{prefix} Ошибка:')
+            log.exception(f"{prefix} Ошибка:")
             time.sleep(60)
 
         finally:
             time.sleep(1)
 
-    log.info(f'{prefix} Завершение')
+    log.info(f"{prefix} Завершение")
