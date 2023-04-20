@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'ipetrash'
+__author__ = "ipetrash"
 
 
 import datetime as DT
@@ -18,7 +18,7 @@ from root_common import get_date_str, caller_name, get_logger
 from root_config import DIR_LOGS
 
 
-log = get_logger(__file__, DIR_LOGS / 'parser.txt')
+log = get_logger(__file__, DIR_LOGS / "parser.txt")
 
 
 @dataclass
@@ -31,15 +31,15 @@ class Currency:
     raw_value: Decimal
 
     @classmethod
-    def parse_from(cls, el: Tag) -> 'Currency':
-        nominal = int(el.select_one('nominal').string)
-        value = Decimal(el.select_one('value').string.replace(',', '.'))
+    def parse_from(cls, el: Tag) -> "Currency":
+        nominal = int(el.select_one("nominal").string)
+        value = Decimal(el.select_one("value").string.replace(",", "."))
         raw_value = value / nominal
 
         return cls(
-            num_code=int(el.select_one('numcode').string),
-            char_code=el.select_one('charcode').string,
-            name=el.select_one('name').string,
+            num_code=int(el.select_one("numcode").string),
+            char_code=el.select_one("charcode").string,
+            name=el.select_one("name").string,
             nominal=nominal,
             value=value,
             raw_value=raw_value,
@@ -67,27 +67,27 @@ def iter_dates(start_date: DT.date, end_date: DT.date = None) -> Iterator[DT.dat
 
 
 def get_currencies(date: DT.date) -> tuple[DT.date, dict[str, Currency]]:
-    date_fmt = '%d.%m.%Y'
+    date_fmt = "%d.%m.%Y"
     date_req = date.strftime(date_fmt)
 
-    url = 'https://www.cbr.ru/scripts/XML_daily.asp'
+    url = "https://www.cbr.ru/scripts/XML_daily.asp"
 
     rs = requests.get(url, params=dict(date_req=date_req))
-    root = BeautifulSoup(rs.content, 'html.parser')
+    root = BeautifulSoup(rs.content, "html.parser")
 
     currency_by_value = dict()
-    date = DT.datetime.strptime(root.valcurs['date'], date_fmt).date()
+    date = DT.datetime.strptime(root.valcurs["date"], date_fmt).date()
 
-    for s in root.find_all('valute'):
+    for s in root.find_all("valute"):
         currency = Currency.parse_from(s)
         currency_by_value[currency.char_code] = currency
 
     return date, currency_by_value
 
 
-def parse(date_req: DT.date, prefix: str = '[parse]'):
+def parse(date_req: DT.date, prefix: str = "[parse]"):
     date, currency_by_value = get_currencies(date_req)
-    log.debug(f'{prefix} Получена дата {date}, валют {len(currency_by_value)}')
+    log.debug(f"{prefix} Получена дата {date}, валют {len(currency_by_value)}")
 
     # Не за все даты на сайте есть информация
     if date != date_req:
@@ -102,7 +102,7 @@ def parse(date_req: DT.date, prefix: str = '[parse]'):
                 char_code=currency.char_code,
                 title=currency.name,
             )
-            log.info(f'{prefix} Добавлена валюта: {currency}')
+            log.info(f"{prefix} Добавлена валюта: {currency}")
 
         rate = db.ExchangeRate.get_by(date=date, currency_char_code=currency_char_code)
         if not rate:
@@ -112,19 +112,21 @@ def parse(date_req: DT.date, prefix: str = '[parse]'):
                 currency_char_code=currency_char_code,
                 value=value,
             )
-            log.info(f'{prefix} За {get_date_str(date)} добавлено {currency_char_code} = {value}')
+            log.info(
+                f"{prefix} За {get_date_str(date)} добавлено {currency_char_code} = {value}"
+            )
 
     diff_count = db.ExchangeRate.count() - old_count
     if diff_count > 0:
-        log.info(f'{prefix} Добавлено {diff_count} записей\n')
+        log.info(f"{prefix} Добавлено {diff_count} записей\n")
 
         db.Subscription.update(was_sending=False).execute()
 
 
 def run_parser():
-    prefix = f'[{caller_name()}]'
+    prefix = f"[{caller_name()}]"
 
-    log.info(f'{prefix} Запуск')
+    log.info(f"{prefix} Запуск")
 
     while True:
         start_date = db.ExchangeRate.get_last_date()
@@ -133,14 +135,14 @@ def run_parser():
 
         i = 0
         for date_req in iter_dates(start_date):
-            log.debug(f'{prefix} Проверка для {date_req}')
+            log.debug(f"{prefix} Проверка для {date_req}")
 
             while True:
                 try:
                     parse(date_req, prefix=prefix)
 
                 except Exception:
-                    log.exception(f'{prefix} Ошибка:')
+                    log.exception(f"{prefix} Ошибка:")
                     time.sleep(3600 * 4)  # Wait 4 hours
                     continue
 
@@ -153,11 +155,13 @@ def run_parser():
 
         time.sleep(60 * 60)  # Every 1 hour
 
-    log.info(f'{prefix} Завершение')
+    log.info(f"{prefix} Завершение")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     date, currency_by_value = get_currencies(DT.date.today())
-    print(f'Дата {get_date_str(date)}. Валют ({len(currency_by_value)}): {currency_by_value}')
+    print(
+        f"Дата {get_date_str(date)}. Валют ({len(currency_by_value)}): {currency_by_value}"
+    )
 
     run_parser()
