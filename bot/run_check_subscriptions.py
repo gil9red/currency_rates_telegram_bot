@@ -41,25 +41,22 @@ def sending_notifications():
                 )
                 text = f"<b>Рассылка</b>\n{db.ExchangeRate.get_full_description(selected_currencies)}"
 
-                success = False
                 try:
                     bot.send_message(
                         chat_id=subscription.user_id,  # Для приватных чатов chat_id равен user_id
                         text=text,
                         parse_mode=ParseMode.HTML,
                     )
-                    success = True
+                    subscription.was_sending = True
+                    subscription.save()
 
                 except BadRequest as e:
                     if "Chat not found" in str(e):
                         log.info(f"Рассылка невозможна: пользователь #{subscription.user_id} не найден")
-                        success = True
+                        subscription.is_active = False
+                        subscription.save()
                     else:
                         raise e
-
-                if success:
-                    subscription.was_sending = True
-                    subscription.save()
 
                 time.sleep(0.4)
 
